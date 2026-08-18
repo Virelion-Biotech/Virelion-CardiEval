@@ -12,6 +12,7 @@ from .bundle import build_bundle, save_bundle
 from .evaluator import evaluate_submission, load_submission, save_report, sha256_file
 from .integrity import ReleaseManifest, verify_release_manifest
 from .models import BenchmarkManifest
+from .pipeline import run_evaluation
 from .publication import load_bundle, publish_leaderboard, save_snapshot
 from .publication_history import compare_snapshots, load_snapshot, save_comparison
 from .registry import BenchmarkTask
@@ -57,6 +58,37 @@ def _evaluate(argv: list[str]) -> int:
         "metrics": {m.name: m.value for m in report.metrics},
     }))
     return 0 if report.ok else 1
+
+
+def _run(argv: list[str]) -> int:
+    parser = argparse.ArgumentParser(prog="cardieval run")
+    parser.add_argument("--package", required=True)
+    parser.add_argument("--root", required=True)
+    parser.add_argument("--submission", required=True)
+    parser.add_argument("--model-id", required=True)
+    parser.add_argument("--task-id", required=True)
+    parser.add_argument("--report-output", default="cardieval-report.json")
+    parser.add_argument("--bundle-output", default="cardieval-bundle.json")
+    parser.add_argument("--run-output", default="cardieval-run.json")
+    args = parser.parse_args(argv)
+    run_manifest = run_evaluation(
+        package_path=args.package,
+        package_root=args.root,
+        submission_path=args.submission,
+        model_id=args.model_id,
+        task_id=args.task_id,
+        report_path=args.report_output,
+        bundle_path=args.bundle_output,
+        run_manifest_path=args.run_output,
+    )
+    print(json.dumps({
+        "ok": True,
+        "run_id": run_manifest.run_id,
+        "report": args.report_output,
+        "bundle": args.bundle_output,
+        "run_manifest": args.run_output,
+    }))
+    return 0
 
 
 def _publish(argv: list[str]) -> int:
@@ -116,6 +148,8 @@ def _verify_benchmark(argv: list[str]) -> int:
 
 def main() -> int:
     argv = sys.argv[1:]
+    if argv and argv[0] == "run":
+        return _run(argv[1:])
     if argv and argv[0] == "publish":
         return _publish(argv[1:])
     if argv and argv[0] == "compare":
