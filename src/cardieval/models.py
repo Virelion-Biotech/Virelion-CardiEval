@@ -50,18 +50,42 @@ class MetricResult(BaseModel):
     direction: Literal["higher_is_better", "lower_is_better", "informational"]
 
 
+class SubgroupResult(BaseModel):
+    """Metric result scoped to a declared evaluation subgroup."""
+
+    subgroup: str
+    n: int
+    metrics: list[MetricResult]
+    warning: str | None = None
+
+
+class ModelComparison(BaseModel):
+    """Paired comparison of two models evaluated on the same samples."""
+
+    metric: str
+    model_a_score: float
+    model_b_score: float
+    difference: float
+    permutation_pvalue: float
+    wilcoxon_pvalue: float | None = None
+    winner: Literal["model_a", "model_b", "tie", "undetermined"]
+    n: int
+
+
 class EvaluationReport(BaseModel):
     """Serializable, provenance-aware result produced by the evaluator."""
 
-    schema_version: str = "0.1"
+    schema_version: str = "0.2"
     evaluator_version: str
     benchmark_id: str
     benchmark_version: str
+    benchmark_sha256: str
     task: TaskType
     split: SplitName
     model_id: str
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     metrics: list[MetricResult]
+    subgroups: list[SubgroupResult] = Field(default_factory=list)
     warnings: list[str] = Field(default_factory=list)
     errors: list[str] = Field(default_factory=list)
 
