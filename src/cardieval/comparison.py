@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 
 import numpy as np
 
@@ -15,13 +15,20 @@ def compare_predictions(
     y_true: Sequence,
     pred_a: Sequence,
     pred_b: Sequence,
-    metric,
+    metric: Callable,
     *,
     metric_name: str,
+    samplewise_score: Callable | None = None,
     n_resamples: int = 5000,
     seed: int = 0,
 ) -> ModelComparison:
-    """Compare two models on identical samples with paired resampling tests."""
+    """Compare two models on identical samples with a paired permutation test.
+
+    ``samplewise_score`` is optional. It must return one scalar loss/score per
+    sample and is required when a paired Wilcoxon test is desired. This avoids
+    incorrectly applying Wilcoxon to metrics such as AUROC or macro-F1 that are
+    not additive across individual observations.
+    """
     yt = np.asarray(y_true)
     a = np.asarray(pred_a)
     b = np.asarray(pred_b)
@@ -33,12 +40,13 @@ def compare_predictions(
     p_perm = paired_permutation_pvalue(
         yt, a, b, metric, n_resamples=n_resamples, seed=seed
     )
-    per_sample_a = np.asarray([metric(np.asarray([y]), np.asarray([p])) for y, p in zip(yt, a)])
-    per_sample_b = np.asarray([metric(np.asarray([y]), np.asarray([p])) for y, p in zip(yt, b)])
-    try:
-        p_wilcoxon = wilcoxon_pvalue(per_sample_a, per_sample_b)
-    except ValueError:
-        p_wilcoxon = None
+    p_wilcoxon = None
+    if samplewise_score is not None:
+        per_a = np.asarray(samplewise_score(yt, a), dtype=float)
+        per_b = np.asarray(samplewise_score(yt, b), dtype=float)
+        if per_a.shape != per_b.shape or per_a.shape != yt.shape:
+            raise ValueError("samplewise_score must return one value per sample")
+        p_wilcoxon = wilcoxon_pvalue(per_a, per_b)
     direction = METRIC_DIRECTIONS.get(metric_name, "informational")
     if direction == "higher_is_better":
         winner = "model_a" if difference > 0 else "model_b" if difference < 0 else "tie"
