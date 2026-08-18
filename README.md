@@ -2,7 +2,7 @@
 
 **Independent evaluation infrastructure for cardiac challenge models.**
 
-CardiEval is the evaluation layer of the Virelion cardiac AI stack. Its job is to judge model outputs independently from the code that produced them, using immutable benchmark manifests, strict submission contracts, reproducible metrics, uncertainty intervals, robustness checks, and statistical comparison utilities.
+CardiEval is the evaluation layer of the Virelion cardiac AI stack. Its job is to judge model outputs independently from the code that produced them, using immutable benchmark manifests, strict submission contracts, reproducible metrics, uncertainty intervals, robustness checks, statistical comparison utilities, and auditable leaderboard rules.
 
 ## Architecture
 
@@ -13,13 +13,15 @@ Benchmark manifest
 Submission JSONL --> validation --> metric engine --> confidence intervals
                                       |                       |
                                       +--> calibration        +--> subgroup robustness
-                                      |
-                                      +--> model comparison
-                                      v
-                              EvaluationReport
+                                      |                       |
+                                      +--> model comparison  +--> corrected significance
+                                      v                       |
+                              EvaluationReport               |
+                                      |                       |
+                                      +--> task registry --> leaderboard
 ```
 
-## v0.2 core
+## Current core
 
 - Strict `PredictionRecord` and `BenchmarkManifest` schemas with Pydantic.
 - Exact sample-set validation to catch missing, duplicated, or out-of-benchmark predictions.
@@ -30,6 +32,9 @@ Submission JSONL --> validation --> metric engine --> confidence intervals
 - Declared subgroup evaluation with minimum-size warnings.
 - Paired permutation testing for model-vs-model comparisons.
 - Optional paired Wilcoxon testing only when an explicit sample-wise score/loss is supplied; aggregate metrics such as AUROC and macro-F1 are never treated as per-sample quantities.
+- Bonferroni and Benjamini-Hochberg multiple-testing correction.
+- Deterministic leaderboard aggregation with mean repeated-report scores, stable ranking, and tie handling.
+- Versioned benchmark/task registry defining allowed metrics, primary metric/direction, task type, and valid splits.
 - SHA-256 benchmark/artifact fingerprinting and provenance-aware reports.
 - JSON reports designed for later CardiBridge and CardiTrace integration.
 - Python 3.10-3.12 CI with linting and tests.
@@ -68,8 +73,9 @@ pytest
 3. **Leakage-resistant:** exact benchmark membership is checked before scoring.
 4. **Statistically honest:** uncertainty and paired tests are explicit rather than relying on a single point estimate.
 5. **Robustness-aware:** subgroup performance and small-cell warnings are reported instead of hiding heterogeneity.
-6. **Composable:** report schemas are designed to become the contract for CardiBridge and the audit layer for CardiTrace.
+6. **Leaderboard-safe:** scoring contracts are versioned and rankings are derived from compatible reports only.
+7. **Composable:** report schemas are designed to become the contract for CardiBridge and the audit layer for CardiTrace.
 
 ## Roadmap
 
-Next: leaderboard aggregation, multiple-testing correction, ranking tasks, richer robustness suites, calibration curves, confidence-aware model comparison reports, signed/provenance-aware artifacts, and integration with CardiBench, CardiAgent, and CardiVex.
+Next: ranking-task metrics, richer robustness suites, calibration curves, confidence-aware model comparison reports, signed/provenance-aware artifacts, and integration with CardiBench, CardiAgent, and CardiVex.
