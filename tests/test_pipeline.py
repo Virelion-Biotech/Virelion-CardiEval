@@ -1,16 +1,10 @@
-from pathlib import Path
-
 from cardieval.benchmark_package import BenchmarkPackage
-from cardieval.models import BenchmarkManifest, PredictionRecord
+from cardieval.models import BenchmarkManifest
 from cardieval.pipeline import run_evaluation
 from cardieval.registry import BenchmarkTask
 
 
 def test_end_to_end_pipeline(tmp_path):
-    data = tmp_path / "data.json"
-    data.write_text("benchmark-data", encoding="utf-8")
-    import hashlib
-
     package = BenchmarkPackage(
         benchmark_id="bench",
         version="1",
