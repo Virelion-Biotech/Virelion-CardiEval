@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "CardiBridge Envelope",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "message_id", "source_role", "target_role", "payload_type", "benchmark_id", "benchmark_version", "task_id", "payload_sha256", "payload"],
+  "properties": {
+    "schema_version": {"type": "string"},
+    "message_id": {"type": "string", "minLength": 1},
+    "source_role": {"enum": ["agent", "vex", "eval"]},
+    "target_role": {"enum": ["agent", "vex", "eval"]},
+    "payload_type": {"enum": ["challenge_population", "observation", "prediction_submission"]},
+    "benchmark_id": {"type": "string", "minLength": 1},
+    "benchmark_version": {"type": "string", "minLength": 1},
+    "task_id": {"type": "string", "minLength": 1},
+    "payload_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "payload": {"type": "object"}
+  }
+}
