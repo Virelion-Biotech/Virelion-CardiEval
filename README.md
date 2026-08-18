@@ -7,9 +7,9 @@ CardiEval is the evaluation layer of the Virelion cardiac AI stack. Its job is t
 ## Architecture
 
 ```text
-Benchmark manifest
-       |
-       v
+Benchmark manifest + task contract
+              |
+              v
 Submission JSONL --> validation --> metric engine --> confidence intervals
                                       |                       |
                                       +--> calibration        +--> subgroup robustness
@@ -29,6 +29,8 @@ Submission JSONL --> validation --> metric engine --> confidence intervals
 
 - Strict `PredictionRecord` and `BenchmarkManifest` schemas with Pydantic.
 - Exact sample-set validation to catch missing, duplicated, or out-of-benchmark predictions.
+- Versioned `BenchmarkTask` contracts defining task type, allowed metrics, primary metric/direction, and permitted splits.
+- Task-contract enforcement inside `evaluate_submission`, not just in the registry or CLI.
 - Classification metrics: accuracy, balanced accuracy, macro-F1, AUROC, AUPRC.
 - Calibration metrics: Brier score and expected calibration error (ECE).
 - Calibration-curve/reliability-bin output for probabilistic binary models.
@@ -43,7 +45,6 @@ Submission JSONL --> validation --> metric engine --> confidence intervals
 - Optional paired Wilcoxon testing only when an explicit sample-wise score/loss is supplied; aggregate metrics such as AUROC and macro-F1 are never treated as per-sample quantities.
 - Bonferroni and Benjamini-Hochberg multiple-testing correction.
 - Deterministic leaderboard aggregation with mean repeated-report scores, stable ranking, and tie handling.
-- Versioned benchmark/task registry defining allowed metrics, primary metric/direction, task type, and valid splits.
 - SHA-256 benchmark/artifact fingerprinting, canonical JSON hashing, and deterministic evaluation fingerprints.
 - `SubmissionBundle` contract linking benchmark identity, submission hash, evaluation fingerprint, task ID, model ID, and full report for CardiBench/CardiBridge interoperability.
 - CLI support for writing both a report and an interoperable bundle.
@@ -59,6 +60,25 @@ Predictions are JSON Lines. Every line must contain a stable `sample_id`, `y_tru
 
 The evaluator rejects duplicate or out-of-benchmark IDs and requires an exact sample-set match. This prevents silent evaluation on a convenient subset or accidental contamination by unknown samples.
 
+## Task contract
+
+A registered task definition is JSON and is authoritative for scoring. For example:
+
+```json
+{
+  "benchmark_id": "demo-cardiac-benchmark",
+  "version": "1.0.0",
+  "task_id": "binary-challenge-detection",
+  "task_type": "binary_classification",
+  "allowed_metrics": ["accuracy", "balanced_accuracy", "macro_f1", "auroc", "auprc", "brier", "ece"],
+  "primary_metric": "auroc",
+  "primary_direction": "higher_is_better",
+  "splits": ["validation", "test"]
+}
+```
+
+The evaluator verifies benchmark identity, version, task type, permitted split, allowed metrics, and the existence of the declared primary metric before producing a contract-aware report.
+
 ## Run locally
 
 ```bash
@@ -67,7 +87,7 @@ cardieval \
   --manifest examples/benchmark_manifest.json \
   --submission examples/submission.jsonl \
   --model-id demo-model \
-  --task-id demo-task \
+  --task-file examples/demo_task.json \
   --output cardiEval-report.json \
   --bundle-output cardiEval-bundle.json
 ```
@@ -92,4 +112,4 @@ pytest
 
 ## Roadmap
 
-Next: richer stress/shift suites, correction-aware decision rules, signed artifact verification, and full CardiBench/CardiAgent/CardiVex integration.
+Next: richer stress/shift suites, correction-aware decision rules, signed artifact verification, leaderboard publication formats, and full CardiBench/CardiAgent/CardiVex integration.
