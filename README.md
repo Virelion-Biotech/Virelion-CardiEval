@@ -2,7 +2,7 @@
 
 **Independent evaluation infrastructure for cardiac challenge models.**
 
-CardiEval is the evaluation layer of the Virelion cardiac AI stack. Its job is to judge model outputs independently from the code that produced them, using immutable benchmark manifests, strict submission contracts, reproducible metrics, uncertainty intervals, robustness checks, statistical comparison utilities, and auditable leaderboard rules.
+CardiEval is the evaluation layer of the Virelion cardiac AI stack. Its job is to judge model outputs independently from the code that produced them, using immutable benchmark manifests, strict submission contracts, reproducible metrics, uncertainty intervals, robustness checks, statistical comparison utilities, auditable leaderboard rules, and self-contained evaluation bundles.
 
 ## Architecture
 
@@ -19,6 +19,8 @@ Submission JSONL --> validation --> metric engine --> confidence intervals
                                       +--> ranking metrics   +--> stress/shift analysis
                                       v                       |
                               EvaluationReport               |
+                                      |                       |
+                                      +--> provenance --> SubmissionBundle
                                       |                       |
                                       +--> task registry --> leaderboard
 ```
@@ -42,8 +44,9 @@ Submission JSONL --> validation --> metric engine --> confidence intervals
 - Bonferroni and Benjamini-Hochberg multiple-testing correction.
 - Deterministic leaderboard aggregation with mean repeated-report scores, stable ranking, and tie handling.
 - Versioned benchmark/task registry defining allowed metrics, primary metric/direction, task type, and valid splits.
-- SHA-256 benchmark/artifact fingerprinting and provenance-aware reports.
-- JSON reports designed for later CardiBridge and CardiTrace integration.
+- SHA-256 benchmark/artifact fingerprinting, canonical JSON hashing, and deterministic evaluation fingerprints.
+- `SubmissionBundle` contract linking benchmark identity, submission hash, evaluation fingerprint, task ID, model ID, and full report for CardiBench/CardiBridge interoperability.
+- CLI support for writing both a report and an interoperable bundle.
 - Python 3.10-3.12 CI with linting and tests.
 
 ## Submission format
@@ -64,8 +67,12 @@ cardieval \
   --manifest examples/benchmark_manifest.json \
   --submission examples/submission.jsonl \
   --model-id demo-model \
-  --output cardiEval-report.json
+  --task-id demo-task \
+  --output cardiEval-report.json \
+  --bundle-output cardiEval-bundle.json
 ```
+
+The bundle contains deterministic identifiers for the benchmark, submission, evaluation configuration, and resulting report so downstream systems can verify that two results refer to the same evaluation event.
 
 Or run the test suite:
 
@@ -76,13 +83,13 @@ pytest
 ## Design principles
 
 1. **Independent:** evaluation consumes model outputs, not model internals.
-2. **Reproducible:** seeds, benchmark versions, and evaluator versions are explicit.
+2. **Reproducible:** seeds, benchmark versions, evaluator versions, artifact hashes, and evaluation fingerprints are explicit.
 3. **Leakage-resistant:** exact benchmark membership is checked before scoring.
 4. **Statistically honest:** uncertainty and paired tests are explicit rather than relying on a single point estimate.
 5. **Robustness-aware:** subgroup performance and small-cell warnings are reported instead of hiding heterogeneity.
 6. **Leaderboard-safe:** scoring contracts are versioned and rankings are derived from compatible reports only.
-7. **Composable:** report schemas are designed to become the contract for CardiBridge and the audit layer for CardiTrace.
+7. **Composable:** the report and bundle schemas are designed as contracts for CardiBench and CardiBridge and as audit inputs for CardiTrace.
 
 ## Roadmap
 
-Next: richer stress/shift suites, confidence-aware comparison reports with correction-aware decision rules, signed/provenance-aware artifacts, and integration with CardiBench, CardiAgent, and CardiVex.
+Next: richer stress/shift suites, correction-aware decision rules, signed artifact verification, and full CardiBench/CardiAgent/CardiVex integration.
