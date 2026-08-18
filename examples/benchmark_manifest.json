@@ -1,0 +1,16 @@
+{
+  "benchmark_id": "cardiac-challenge-demo",
+  "version": "0.1.0",
+  "task": "binary_classification",
+  "split": "test",
+  "sample_ids": ["sample-001", "sample-002", "sample-003", "sample-004"],
+  "dataset_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+  "label_schema": {
+    "0": "negative",
+    "1": "positive"
+  },
+  "metadata": {
+    "purpose": "minimal evaluator demonstration",
+    "leakage_policy": "test labels are evaluator-controlled"
+  }
+}
