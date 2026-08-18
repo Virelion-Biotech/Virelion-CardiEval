@@ -2,7 +2,7 @@
 
 **Independent evaluation infrastructure for cardiac challenge models.**
 
-CardiEval is the evaluation layer of the Virelion cardiac AI stack. Its job is to judge model outputs independently from the code that produced them, using immutable benchmark manifests, strict submission contracts, reproducible metrics, uncertainty intervals, robustness checks, statistical comparison utilities, auditable leaderboard rules, self-contained evaluation bundles, publication snapshots, historical comparison, release integrity verification, explicit statistical decision policies, CardiBench-compatible benchmark packages, and an end-to-end evaluation runner.
+CardiEval is the evaluation layer of the Virelion cardiac AI stack. Its job is to judge model outputs independently from the code that produced them, using immutable benchmark manifests, strict submission contracts, reproducible metrics, uncertainty intervals, robustness checks, statistical comparison utilities, auditable leaderboard rules, self-contained evaluation bundles, publication snapshots, historical comparison, release integrity verification, explicit statistical decision policies, CardiBench-compatible benchmark packages, an end-to-end evaluation runner, and a versioned CardiBridge exchange contract.
 
 ## Architecture
 
@@ -11,6 +11,9 @@ CardiBench package
        |
        v
 package verification --> BenchmarkManifest + BenchmarkTask
+                                  |
+                      CardiBridge envelope
+                    agent/vex -------------> eval
                                   |
                                   v
 Submission JSONL ------------> validation
@@ -37,7 +40,7 @@ Submission JSONL ------------> validation
                                                   scorecard         + verification
 ```
 
-## 1.3 core
+## 1.4 core
 
 - Strict `PredictionRecord` and `BenchmarkManifest` schemas with Pydantic.
 - Exact sample-set validation to catch missing, duplicated, or out-of-benchmark predictions.
@@ -65,8 +68,38 @@ Submission JSONL ------------> validation
 - Cross-benchmark `Scorecard` aggregation with per-benchmark normalization and mean-rank reporting.
 - `ReleaseManifest` artifact records with SHA-256 and size verification.
 - **End-to-end `run` pipeline** producing an evaluation report, submission bundle, and deterministic run manifest from a validated benchmark package plus model submission.
-- CLI commands for evaluation, publication, historical comparison, release verification, benchmark-package verification, and end-to-end runs.
-- Machine-readable JSON schemas and explicit evaluation/decision/package/run protocols.
+- **CardiBridge protocol** with strict versioned envelopes, Agent/Vex submission payloads, payload integrity checks, benchmark/task identity checks, and capability negotiation.
+- CLI commands for evaluation, publication, historical comparison, release verification, benchmark-package verification, end-to-end runs, and bridge envelope validation.
+- Machine-readable JSON schemas and explicit evaluation/decision/package/run/bridge protocols.
+
+## CardiBridge integration
+
+CardiBridge is the formal exchange boundary between CardiAgent/CardiVex and CardiEval. A producer sends a strict `BridgeEnvelope` whose payload is a `PredictionSubmission` using the same `PredictionRecord` contract as native CardiEval submissions.
+
+The bridge is deliberately fail-closed. Before accepting an envelope, CardiEval verifies:
+
+1. protocol/schema validity;
+2. expected source role and `eval` target role;
+3. benchmark ID/version;
+4. supported payload type;
+5. canonical payload SHA-256;
+6. payload task ID;
+7. task existence and compatibility with the benchmark manifest.
+
+Capabilities are negotiated through `BridgeCapabilities`, allowing producers and CardiEval to intersect supported payload types and task types before sending a submission.
+
+Validate an incoming Agent/Vex envelope without running a full evaluation:
+
+```bash
+cardieval bridge-validate \
+  --package benchmark-package.json \
+  --envelope submission-envelope.json \
+  --source-role agent
+```
+
+The bridge uses the same `PredictionRecord` objects as the local evaluator, so bridge-originated data does not bypass sample-set or benchmark/task validation.
+
+See `docs/CARDIBRIDGE_PROTOCOL.md` and `schemas/bridge-envelope.schema.json` for the exchange contract.
 
 ## CardiBench integration
 
@@ -199,7 +232,7 @@ pytest
 
 The intended traceability chain is:
 
-`BenchmarkPackage → BenchmarkManifest → BenchmarkTask → Submission JSONL → EvaluationReport → SubmissionBundle → EvaluationRunManifest → LeaderboardSnapshot → ReleaseManifest`
+`BenchmarkPackage → BenchmarkManifest → BenchmarkTask → CardiBridge Envelope / Submission JSONL → EvaluationReport → SubmissionBundle → EvaluationRunManifest → LeaderboardSnapshot → ReleaseManifest`
 
 Every stage carries stable identity fields and/or cryptographic hashes. CardiEval provides integrity verification of published artifacts; cryptographic signing and external key management are intentionally separate concerns.
 
@@ -211,8 +244,8 @@ Every stage carries stable identity fields and/or cryptographic hashes. CardiEva
 4. **Statistically honest:** uncertainty, multiplicity correction, and explicit decision rules are preferred to unsupported winner claims.
 5. **Robustness-aware:** subgroup performance and small-cell warnings are reported instead of hiding heterogeneity.
 6. **Leaderboard-safe:** scoring contracts are versioned and publication sets reject incompatible or duplicate results.
-7. **Composable:** the report, bundle, publication, scorecard, release, decision, benchmark-package, and run schemas are designed as contracts for CardiBench/CardiBridge and audit inputs for CardiTrace.
+7. **Composable:** the report, bundle, publication, scorecard, release, decision, benchmark-package, run, and bridge schemas are designed as contracts for CardiBench/CardiBridge and audit inputs for CardiTrace.
 
 ## Documentation
 
-See `docs/EVALUATION_PROTOCOL.md`, `docs/DECISION_POLICY.md`, `docs/CARDIBENCH_INTEGRATION.md`, and `schemas/` for the formal evaluation, decision, integration, and machine-readable contracts.
+See `docs/EVALUATION_PROTOCOL.md`, `docs/DECISION_POLICY.md`, `docs/CARDIBENCH_INTEGRATION.md`, `docs/CARDIBRIDGE_PROTOCOL.md`, and `schemas/` for the formal evaluation, decision, integration, and machine-readable contracts.
