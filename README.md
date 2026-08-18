@@ -15,6 +15,8 @@ Submission JSONL --> validation --> metric engine --> confidence intervals
                                       +--> calibration        +--> subgroup robustness
                                       |                       |
                                       +--> model comparison  +--> corrected significance
+                                      |                       |
+                                      +--> ranking metrics   |
                                       v                       |
                               EvaluationReport               |
                                       |                       |
@@ -28,8 +30,10 @@ Submission JSONL --> validation --> metric engine --> confidence intervals
 - Classification metrics: accuracy, balanced accuracy, macro-F1, AUROC, AUPRC.
 - Calibration metrics: Brier score and expected calibration error (ECE).
 - Regression metrics: MAE and RMSE.
+- Ranking metrics: reciprocal rank (MRR), hit rate@10, and NDCG@10.
 - Seeded percentile bootstrap confidence intervals.
 - Declared subgroup evaluation with minimum-size warnings.
+- Robustness summaries for subgroup spread and relative degradation under perturbation.
 - Paired permutation testing for model-vs-model comparisons.
 - Optional paired Wilcoxon testing only when an explicit sample-wise score/loss is supplied; aggregate metrics such as AUROC and macro-F1 are never treated as per-sample quantities.
 - Bonferroni and Benjamini-Hochberg multiple-testing correction.
@@ -41,7 +45,7 @@ Submission JSONL --> validation --> metric engine --> confidence intervals
 
 ## Submission format
 
-Predictions are JSON Lines. Every line must contain a stable `sample_id`, `y_true`, and `y_pred`; probabilistic classifiers may additionally provide `score` and `subgroup`.
+Predictions are JSON Lines. Every line must contain a stable `sample_id`, `y_true`, and `y_pred`; probabilistic classifiers may additionally provide `score` and `subgroup`. Ranking tasks require `score` for every record, with `y_true` representing non-negative relevance.
 
 ```json
 {"sample_id":"sample-001","y_true":0,"y_pred":0,"score":0.08,"subgroup":"example-group"}
@@ -78,4 +82,4 @@ pytest
 
 ## Roadmap
 
-Next: ranking-task metrics, richer robustness suites, calibration curves, confidence-aware model comparison reports, signed/provenance-aware artifacts, and integration with CardiBench, CardiAgent, and CardiVex.
+Next: calibration curves, confidence-aware model comparison reports, richer stress/shift suites, signed/provenance-aware artifacts, and integration with CardiBench, CardiAgent, and CardiVex.
