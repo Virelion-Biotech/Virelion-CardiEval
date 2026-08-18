@@ -3,12 +3,12 @@
 from __future__ import annotations
 
 import hashlib
-import json
 from pathlib import Path
 from typing import Sequence
 
 import numpy as np
 
+from .calibration import brier_score, expected_calibration_error
 from .metrics import (
     METRIC_DIRECTIONS,
     accuracy,
@@ -19,7 +19,13 @@ from .metrics import (
     mae,
     rmse,
 )
-from .models import BenchmarkManifest, EvaluationReport, MetricResult, PredictionRecord
+from .models import (
+    BenchmarkManifest,
+    EvaluationReport,
+    MetricResult,
+    PredictionRecord,
+    SubgroupResult,
+)
 from .stats import bootstrap_ci
 
 
@@ -64,62 +70,64 @@ def _assert_alignment(manifest: BenchmarkManifest, records: Sequence[PredictionR
         raise ValueError("Benchmark manifest contains duplicate sample IDs")
 
 
+def _order_records(manifest: BenchmarkManifest, records: Sequence[PredictionRecord]) -> list[PredictionRecord]:
+    positions = {sample_id: i for i, sample_id in enumerate(manifest.sample_ids)}
+    return sorted(records, key=lambda r: positions[r.sample_id])
+
+
 def _classification_metrics(records: Sequence[PredictionRecord]) -> list[MetricResult]:
     yt = np.asarray([r.y_true for r in records])
     yp = np.asarray([r.y_pred for r in records])
-    results = []
+    results: list[MetricResult] = []
     for name, fn in CLASSIFICATION_METRICS.items():
         value = fn(yt, yp)
         low, high = bootstrap_ci(yt, yp, fn, seed=0)
-        results.append(
-            MetricResult(
-                name=name,
-                value=value,
-                ci_low=low,
-                ci_high=high,
-                n=len(records),
-                direction=METRIC_DIRECTIONS[name],
-            )
-        )
+        results.append(MetricResult(name=name, value=value, ci_low=low, ci_high=high, n=len(records), direction=METRIC_DIRECTIONS[name]))
     scores = [r.score for r in records]
     if all(score is not None for score in scores) and len(np.unique(yt)) == 2:
         score_array = np.asarray(scores, dtype=float)
         for name, fn in (("auroc", auroc), ("auprc", auprc)):
             value = fn(yt, score_array)
-            # Resample indices through a closure because AUROC/AUPRC use score instead of y_pred.
-            def score_metric(a: np.ndarray, b: np.ndarray, metric=fn) -> float:
-                return metric(a, b)
-            low, high = bootstrap_ci(yt, score_array, score_metric, seed=0)
-            results.append(
-                MetricResult(
-                    name=name,
-                    value=value,
-                    ci_low=low,
-                    ci_high=high,
-                    n=len(records),
-                    direction=METRIC_DIRECTIONS[name],
-                )
-            )
+            low, high = bootstrap_ci(yt, score_array, fn, seed=0)
+            results.append(MetricResult(name=name, value=value, ci_low=low, ci_high=high, n=len(records), direction=METRIC_DIRECTIONS[name]))
+        for name, fn in (("brier", brier_score), ("ece", expected_calibration_error)):
+            value = fn(yt, score_array)
+            low, high = bootstrap_ci(yt, score_array, fn, seed=0)
+            results.append(MetricResult(name=name, value=value, ci_low=low, ci_high=high, n=len(records), direction="lower_is_better"))
     return results
 
 
 def _regression_metrics(records: Sequence[PredictionRecord]) -> list[MetricResult]:
     yt = np.asarray([float(r.y_true) for r in records])
     yp = np.asarray([float(r.y_pred) for r in records])
-    results = []
+    results: list[MetricResult] = []
     for name, fn in REGRESSION_METRICS.items():
         value = fn(yt, yp)
         low, high = bootstrap_ci(yt, yp, fn, seed=0)
-        results.append(
-            MetricResult(
-                name=name,
-                value=value,
-                ci_low=low,
-                ci_high=high,
-                n=len(records),
-                direction=METRIC_DIRECTIONS[name],
-            )
-        )
+        results.append(MetricResult(name=name, value=value, ci_low=low, ci_high=high, n=len(records), direction=METRIC_DIRECTIONS[name]))
+    return results
+
+
+def _subgroup_results(records: Sequence[PredictionRecord], task: str, *, min_n: int) -> list[SubgroupResult]:
+    groups: dict[str, list[PredictionRecord]] = {}
+    for record in records:
+        if record.subgroup is not None:
+            groups.setdefault(record.subgroup, []).append(record)
+    results: list[SubgroupResult] = []
+    for name, group in sorted(groups.items()):
+        warning = None if len(group) >= min_n else f"subgroup has n={len(group)} below recommended minimum n={min_n}"
+        if task in {"classification", "binary_classification"}:
+            try:
+                metrics = _classification_metrics(group)
+            except ValueError as exc:
+                metrics = []
+                warning = f"{warning + '; ' if warning else ''}{exc}"
+        elif task == "regression":
+            metrics = _regression_metrics(group)
+        else:
+            metrics = []
+            warning = f"{warning + '; ' if warning else ''}subgroup metrics not implemented for {task}"
+        results.append(SubgroupResult(subgroup=name, n=len(group), metrics=metrics, warning=warning))
     return results
 
 
@@ -128,24 +136,30 @@ def evaluate_submission(
     records: Sequence[PredictionRecord],
     *,
     model_id: str,
+    subgroup_min_n: int = 10,
 ) -> EvaluationReport:
     """Evaluate a submission without depending on model internals."""
     _assert_alignment(manifest, records)
-    ordered = sorted(records, key=lambda r: manifest.sample_ids.index(r.sample_id))
+    ordered = _order_records(manifest, records)
     if manifest.task in {"classification", "binary_classification"}:
         metrics = _classification_metrics(ordered)
     elif manifest.task == "regression":
         metrics = _regression_metrics(ordered)
     else:
         raise NotImplementedError(f"Task type not implemented yet: {manifest.task}")
+    subgroups = _subgroup_results(ordered, manifest.task, min_n=subgroup_min_n)
+    warnings = [f"Subgroup '{item.subgroup}': {item.warning}" for item in subgroups if item.warning]
     return EvaluationReport(
-        evaluator_version="0.1.0",
+        evaluator_version="0.2.0",
         benchmark_id=manifest.benchmark_id,
         benchmark_version=manifest.version,
+        benchmark_sha256=manifest.dataset_sha256,
         task=manifest.task,
         split=manifest.split,
         model_id=model_id,
         metrics=metrics,
+        subgroups=subgroups,
+        warnings=warnings,
     )
 
 
