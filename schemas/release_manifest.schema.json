@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "CardiEval ReleaseManifest",
+  "type": "object",
+  "required": ["schema_version", "release_id", "version", "benchmark_id", "benchmark_version", "task_id", "publication_id", "artifacts", "manifest_sha256"],
+  "properties": {
+    "schema_version": {"type": "string"},
+    "release_id": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "version": {"type": "string"},
+    "benchmark_id": {"type": "string"},
+    "benchmark_version": {"type": "string"},
+    "task_id": {"type": "string"},
+    "publication_id": {"type": "string"},
+    "artifacts": {"type": "array", "minItems": 1, "items": {
+      "type": "object",
+      "required": ["path", "sha256", "kind", "size_bytes"],
+      "properties": {
+        "path": {"type": "string"},
+        "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "kind": {"type": "string"},
+        "size_bytes": {"type": "integer", "minimum": 0}
+      },
+      "additionalProperties": false
+    }},
+    "manifest_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+  },
+  "additionalProperties": false
+}
