@@ -8,6 +8,7 @@ import sys
 from pathlib import Path
 
 from .benchmark_package import load_package, verify_package_artifacts
+from .bridge import BridgeCapabilities, BridgeEnvelope, validate_envelope
 from .bundle import build_bundle, save_bundle
 from .evaluator import evaluate_submission, load_submission, save_report, sha256_file
 from .integrity import ReleaseManifest, verify_release_manifest
@@ -91,6 +92,43 @@ def _run(argv: list[str]) -> int:
     return 0
 
 
+def _bridge_validate(argv: list[str]) -> int:
+    parser = argparse.ArgumentParser(prog="cardieval bridge-validate")
+    parser.add_argument("--package", required=True)
+    parser.add_argument("--envelope", required=True)
+    parser.add_argument("--source-role", choices=["agent", "vex", "eval"])
+    args = parser.parse_args(argv)
+    package = load_package(args.package)
+    envelope = BridgeEnvelope.model_validate_json(Path(args.envelope).read_text(encoding="utf-8"))
+    submission = validate_envelope(envelope, package, expected_source_role=args.source_role)
+    print(json.dumps({
+        "ok": True,
+        "message_id": envelope.message_id,
+        "source_role": envelope.source_role,
+        "task_id": submission.task_id,
+        "model_id": submission.model_id,
+        "n_predictions": len(submission.predictions),
+    }))
+    return 0
+
+
+def _verify_benchmark(argv: list[str]) -> int:
+    parser = argparse.ArgumentParser(prog="cardieval verify-benchmark")
+    parser.add_argument("--package", required=True)
+    parser.add_argument("--root", default=".")
+    args = parser.parse_args(argv)
+    package = load_package(args.package)
+    errors = verify_package_artifacts(package, args.root)
+    print(json.dumps({
+        "ok": not errors,
+        "benchmark_id": package.benchmark_id,
+        "version": package.version,
+        "tasks": [task.task_id for task in package.tasks],
+        "errors": errors,
+    }))
+    return 0 if not errors else 1
+
+
 def _publish(argv: list[str]) -> int:
     parser = argparse.ArgumentParser(prog="cardieval publish")
     parser.add_argument("--task-file", required=True)
@@ -129,27 +167,12 @@ def _verify(argv: list[str]) -> int:
     return 0 if not errors else 1
 
 
-def _verify_benchmark(argv: list[str]) -> int:
-    parser = argparse.ArgumentParser(prog="cardieval verify-benchmark")
-    parser.add_argument("--package", required=True)
-    parser.add_argument("--root", default=".")
-    args = parser.parse_args(argv)
-    package = load_package(args.package)
-    errors = verify_package_artifacts(package, args.root)
-    print(json.dumps({
-        "ok": not errors,
-        "benchmark_id": package.benchmark_id,
-        "version": package.version,
-        "tasks": [task.task_id for task in package.tasks],
-        "errors": errors,
-    }))
-    return 0 if not errors else 1
-
-
 def main() -> int:
     argv = sys.argv[1:]
     if argv and argv[0] == "run":
         return _run(argv[1:])
+    if argv and argv[0] == "bridge-validate":
+        return _bridge_validate(argv[1:])
     if argv and argv[0] == "publish":
         return _publish(argv[1:])
     if argv and argv[0] == "compare":
