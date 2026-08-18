@@ -7,12 +7,12 @@ from .comparison import compare_predictions
 from .comparison_report import ComparisonReport, build_comparison_report
 from .confidence import paired_difference_ci
 from .evaluator import EvaluationReport, evaluate_submission
-from .history import ModelMovement, PublicationComparison, compare_snapshots, load_snapshot, save_comparison, snapshot_id
 from .integrity import ArtifactRecord, ReleaseManifest, build_release_manifest, fingerprint_file, verify_release_manifest
 from .leaderboard import Leaderboard, LeaderboardEntry, build_leaderboard
 from .models import BenchmarkManifest, MetricResult, ModelComparison, PredictionRecord, SubgroupResult
 from .multiple_testing import benjamini_hochberg, bonferroni
 from .publication import LeaderboardSnapshot, ingest_bundles, load_bundle, publish_leaderboard, save_snapshot
+from .publication_history import LeaderboardDelta, PublicationComparison, compare_snapshots, load_snapshot, save_comparison, snapshot_hash
 from .ranking import hit_rate_at_k, ndcg_at_k, reciprocal_rank
 from .provenance import artifact_manifest, canonical_json_hash, evaluation_fingerprint, sha256_text
 from .registry import BenchmarkTask, TaskRegistry
@@ -22,8 +22,8 @@ from .stress import StressResult, aggregate_stress, compare_stress
 
 __all__ = [
     "ArtifactRecord", "BenchmarkManifest", "BenchmarkScore", "BenchmarkTask", "CalibrationBin",
-    "ComparisonReport", "EvaluationReport", "Leaderboard", "LeaderboardEntry", "LeaderboardSnapshot",
-    "MetricResult", "ModelComparison", "ModelMovement", "ModelScorecard", "PredictionRecord",
+    "ComparisonReport", "EvaluationReport", "Leaderboard", "LeaderboardDelta", "LeaderboardEntry",
+    "LeaderboardSnapshot", "MetricResult", "ModelComparison", "ModelScorecard", "PredictionRecord",
     "PublicationComparison", "ReleaseManifest", "Scorecard", "StressResult", "SubgroupResult",
     "SubmissionBundle", "TaskRegistry", "aggregate_stress", "artifact_manifest", "benjamini_hochberg",
     "brier_score", "bonferroni", "build_bundle", "build_comparison_report", "build_leaderboard",
@@ -32,7 +32,7 @@ __all__ = [
     "evaluation_fingerprint", "expected_calibration_error", "fingerprint_file", "hit_rate_at_k",
     "ingest_bundles", "load_bundle", "load_snapshot", "ndcg_at_k", "paired_difference_ci",
     "publish_leaderboard", "reciprocal_rank", "relative_drop", "save_bundle", "save_comparison",
-    "save_snapshot", "sha256_text", "snapshot_id", "subgroup_robustness", "verify_release_manifest",
+    "save_snapshot", "sha256_text", "snapshot_hash", "subgroup_robustness", "verify_release_manifest",
 ]
 
 __version__ = "1.0.0"
