@@ -1,6 +1,6 @@
-from cardiEval.leaderboard import build_leaderboard
-from cardiEval.multiple_testing import benjamini_hochberg, bonferroni
-from cardiEval.models import EvaluationReport, MetricResult
+from cardieval.leaderboard import build_leaderboard
+from cardieval.multiple_testing import benjamini_hochberg, bonferroni
+from cardieval.models import EvaluationReport, MetricResult
 
 
 def report(model_id: str, score: float) -> EvaluationReport:
