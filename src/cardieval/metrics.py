@@ -9,6 +9,7 @@ from sklearn.metrics import (
     accuracy_score,
     average_precision_score,
     balanced_accuracy_score,
+    brier_score_loss,
     f1_score,
     mean_absolute_error,
     mean_squared_error,
@@ -53,6 +54,15 @@ def auprc(y_true: Sequence, score: Sequence[float]) -> float:
     return float(average_precision_score(a, s))
 
 
+def brier(y_true: Sequence, score: Sequence[float]) -> float:
+    a, s = _arrays(y_true, score)
+    if not np.all(np.isin(np.unique(a), [0, 1])):
+        raise ValueError("Brier score currently supports binary labels 0/1")
+    if np.any((s < 0) | (s > 1)):
+        raise ValueError("probability scores must be in [0, 1]")
+    return float(brier_score_loss(a.astype(float), s.astype(float)))
+
+
 def mae(y_true: Sequence[float], y_pred: Sequence[float]) -> float:
     a, b = _arrays(y_true, y_pred)
     return float(mean_absolute_error(a, b))
@@ -69,6 +79,8 @@ METRIC_DIRECTIONS = {
     "macro_f1": "higher_is_better",
     "auroc": "higher_is_better",
     "auprc": "higher_is_better",
+    "brier": "lower_is_better",
+    "ece": "lower_is_better",
     "mae": "lower_is_better",
     "rmse": "lower_is_better",
 }
