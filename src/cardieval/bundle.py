@@ -17,7 +17,7 @@ class SubmissionBundle(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
-    schema_version: str = "1.0"
+    schema_version: str = "1.1"
     bundle_id: str = Field(min_length=1)
     benchmark_id: str = Field(min_length=1)
     benchmark_version: str = Field(min_length=1)
@@ -44,6 +44,8 @@ def build_bundle(
         raise ValueError("report benchmark_version does not match manifest")
     if report.benchmark_sha256 != manifest.dataset_sha256:
         raise ValueError("report benchmark_sha256 does not match manifest")
+    if report.task_id != task_id:
+        raise ValueError("report task_id does not match bundle task_id")
 
     fingerprint = canonical_json_hash(
         {
@@ -53,6 +55,8 @@ def build_bundle(
             "task_id": task_id,
             "model_id": report.model_id,
             "evaluator_version": report.evaluator_version,
+            "primary_metric": report.primary_metric,
+            "primary_direction": report.primary_direction,
             "report": report.model_dump(mode="json"),
         }
     )
