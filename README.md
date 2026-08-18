@@ -2,41 +2,49 @@
 
 **Independent evaluation infrastructure for cardiac challenge models.**
 
-CardiEval is the evaluation layer of the Virelion cardiac AI stack. Its job is to judge model outputs independently from the code that produced them, using immutable benchmark manifests, strict submission contracts, reproducible metrics, uncertainty intervals, robustness checks, statistical comparison utilities, auditable leaderboard rules, self-contained evaluation bundles, publication snapshots, historical comparison, release integrity verification, and explicit statistical decision policies.
+CardiEval is the evaluation layer of the Virelion cardiac AI stack. Its job is to judge model outputs independently from the code that produced them, using immutable benchmark manifests, strict submission contracts, reproducible metrics, uncertainty intervals, robustness checks, statistical comparison utilities, auditable leaderboard rules, self-contained evaluation bundles, publication snapshots, historical comparison, release integrity verification, explicit statistical decision policies, and CardiBench-compatible benchmark packages.
 
 ## Architecture
 
 ```text
-Benchmark manifest + task contract
-              |
-              v
-Submission JSONL --> validation --> metric engine --> confidence intervals
-                                      |                       |
-                                      +--> calibration        +--> subgroup robustness
-                                      |                       |
-                                      +--> diagnostic metrics +--> stress/shift analysis
-                                      |                       |
-                                      +--> model comparison  +--> corrected significance
-                                      v                       |
-                              EvaluationReport               |
-                                      |                       |
-                                      +--> provenance --> SubmissionBundle
-                                      |                       |
-                                      +--> task registry --> leaderboard --> publication snapshot
-                                                                      |
-                                                                      +--> historical comparison
-                                                                      |
-                                                                      +--> cross-benchmark scorecard
-                                                                      |
-                                                                      +--> release manifest --> verification
+CardiBench package
+       |
+       v
+package verification --> BenchmarkManifest + BenchmarkTask
+                                  |
+                                  v
+Submission JSONL ------------> validation
+                                  |
+                                  v
+                              CardiEval
+                 ┌────────────────┼─────────────────┐
+                 │                │                 │
+              metrics       statistics       robustness
+              calibration   CI/tests          subgroup/shift
+              diagnostics  multiplicity       stress
+                 └────────────────┼─────────────────┘
+                                  |
+                                  v
+                         EvaluationReport
+                                  |
+                                  +--> provenance --> SubmissionBundle
+                                  |
+                                  +--> leaderboard --> publication snapshot
+                                                        |
+                         ┌──────────────────────────────┼───────────────┐
+                         v                              v               v
+                  historical comparison        cross-benchmark     release manifest
+                                                  scorecard         + verification
 ```
 
-## 1.1 core
+## 1.2 core
 
 - Strict `PredictionRecord` and `BenchmarkManifest` schemas with Pydantic.
 - Exact sample-set validation to catch missing, duplicated, or out-of-benchmark predictions.
 - Versioned `BenchmarkTask` contracts defining task type, allowed metrics, primary metric/direction, and permitted splits.
-- Task-contract enforcement inside `evaluate_submission`.
+- **CardiBench-compatible `BenchmarkPackage`** contract bundling the manifest, task definitions, metadata, and optional artifact hashes.
+- Package-level contract validation requiring package and manifest identity to match and all tasks to validate against the manifest.
+- Benchmark artifact fingerprinting and verification before model evaluation.
 - Classification metrics: accuracy, balanced accuracy, macro-F1, AUROC, AUPRC.
 - Binary diagnostic metrics: sensitivity, specificity, positive/negative predictive value, MCC, Cohen's kappa, and explicit confusion-matrix counts.
 - Calibration metrics: Brier score and expected calibration error (ECE), plus reliability bins.
@@ -56,8 +64,32 @@ Submission JSONL --> validation --> metric engine --> confidence intervals
 - Deterministic snapshot integrity hashes and historical rank/score delta reports.
 - Cross-benchmark `Scorecard` aggregation with per-benchmark normalization and mean-rank reporting.
 - `ReleaseManifest` artifact records with SHA-256 and size verification.
-- CLI commands for evaluation, publication, historical comparison, and integrity verification.
-- Machine-readable JSON schemas and an explicit evaluation protocol.
+- CLI commands for evaluation, publication, historical comparison, release verification, and benchmark-package verification.
+- Machine-readable JSON schemas and explicit evaluation/decision/package protocols.
+
+## CardiBench integration
+
+A `BenchmarkPackage` is the formal handoff from CardiBench into CardiEval. It contains a benchmark release identity, an exact `BenchmarkManifest`, one or more `BenchmarkTask` definitions, and optional artifact integrity records.
+
+The package must satisfy these invariants:
+
+1. Package benchmark ID equals manifest benchmark ID.
+2. Package release version equals manifest version.
+3. Every task references the same benchmark ID/version.
+4. Every task's type and permitted split are compatible with the manifest.
+5. Task IDs and artifact paths are unique.
+6. Model submissions contain exactly the package manifest's sample IDs for the selected task.
+7. Duplicate or unknown sample IDs are rejected.
+
+Verify a package before evaluation:
+
+```bash
+cardieval verify-benchmark \
+  --package benchmark-package.json \
+  --root ./benchmark-release
+```
+
+See `docs/CARDIBENCH_INTEGRATION.md` for the full package contract.
 
 ## Task contract
 
@@ -132,17 +164,11 @@ cardieval verify \
   --root .
 ```
 
-Run tests with:
-
-```bash
-pytest
-```
-
 ## Reproducibility boundary
 
 The intended traceability chain is:
 
-`BenchmarkManifest → BenchmarkTask → Submission JSONL → EvaluationReport → SubmissionBundle → LeaderboardSnapshot → ReleaseManifest`
+`BenchmarkPackage → BenchmarkManifest → BenchmarkTask → Submission JSONL → EvaluationReport → SubmissionBundle → LeaderboardSnapshot → ReleaseManifest`
 
 Every stage carries stable identity fields and/or cryptographic hashes. CardiEval provides integrity verification of published artifacts; cryptographic signing and external key management are intentionally separate concerns.
 
@@ -154,8 +180,8 @@ Every stage carries stable identity fields and/or cryptographic hashes. CardiEva
 4. **Statistically honest:** uncertainty, multiplicity correction, and explicit decision rules are preferred to unsupported winner claims.
 5. **Robustness-aware:** subgroup performance and small-cell warnings are reported instead of hiding heterogeneity.
 6. **Leaderboard-safe:** scoring contracts are versioned and publication sets reject incompatible or duplicate results.
-7. **Composable:** the report, bundle, publication, scorecard, release, and decision schemas are designed as contracts for CardiBench/CardiBridge and audit inputs for CardiTrace.
+7. **Composable:** the report, bundle, publication, scorecard, release, decision, and benchmark-package schemas are designed as contracts for CardiBench/CardiBridge and audit inputs for CardiTrace.
 
 ## Documentation
 
-See `docs/EVALUATION_PROTOCOL.md`, `docs/DECISION_POLICY.md`, and `schemas/` for the formal evaluation, decision, and machine-readable contracts.
+See `docs/EVALUATION_PROTOCOL.md`, `docs/DECISION_POLICY.md`, `docs/CARDIBENCH_INTEGRATION.md`, and `schemas/` for the formal evaluation, decision, integration, and machine-readable contracts.
