@@ -16,7 +16,7 @@ Submission JSONL --> validation --> metric engine --> confidence intervals
                                       |                       |
                                       +--> model comparison  +--> corrected significance
                                       |                       |
-                                      +--> ranking metrics   |
+                                      +--> ranking metrics   +--> stress/shift analysis
                                       v                       |
                               EvaluationReport               |
                                       |                       |
@@ -29,11 +29,14 @@ Submission JSONL --> validation --> metric engine --> confidence intervals
 - Exact sample-set validation to catch missing, duplicated, or out-of-benchmark predictions.
 - Classification metrics: accuracy, balanced accuracy, macro-F1, AUROC, AUPRC.
 - Calibration metrics: Brier score and expected calibration error (ECE).
+- Calibration-curve/reliability-bin output for probabilistic binary models.
 - Regression metrics: MAE and RMSE.
 - Ranking metrics: reciprocal rank (MRR), hit rate@10, and NDCG@10.
 - Seeded percentile bootstrap confidence intervals.
+- Paired metric-difference confidence intervals for model-vs-model comparisons.
 - Declared subgroup evaluation with minimum-size warnings.
 - Robustness summaries for subgroup spread and relative degradation under perturbation.
+- Stress/shift comparison utilities with direction-aware degradation and aggregate stress scores.
 - Paired permutation testing for model-vs-model comparisons.
 - Optional paired Wilcoxon testing only when an explicit sample-wise score/loss is supplied; aggregate metrics such as AUROC and macro-F1 are never treated as per-sample quantities.
 - Bonferroni and Benjamini-Hochberg multiple-testing correction.
@@ -82,4 +85,4 @@ pytest
 
 ## Roadmap
 
-Next: calibration curves, confidence-aware model comparison reports, richer stress/shift suites, signed/provenance-aware artifacts, and integration with CardiBench, CardiAgent, and CardiVex.
+Next: richer stress/shift suites, confidence-aware comparison reports with correction-aware decision rules, signed/provenance-aware artifacts, and integration with CardiBench, CardiAgent, and CardiVex.
