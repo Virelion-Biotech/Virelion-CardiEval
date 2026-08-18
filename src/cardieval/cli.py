@@ -7,6 +7,7 @@ import json
 import sys
 from pathlib import Path
 
+from .benchmark_package import load_package, verify_package_artifacts
 from .bundle import build_bundle, save_bundle
 from .evaluator import evaluate_submission, load_submission, save_report, sha256_file
 from .integrity import ReleaseManifest, verify_release_manifest
@@ -26,7 +27,6 @@ def _evaluate(argv: list[str]) -> int:
     parser.add_argument("--output", default="cardieval-report.json")
     parser.add_argument("--bundle-output")
     args = parser.parse_args(argv)
-
     manifest_path = Path(args.manifest)
     submission_path = Path(args.submission)
     manifest = BenchmarkManifest.model_validate_json(manifest_path.read_text(encoding="utf-8"))
@@ -36,7 +36,6 @@ def _evaluate(argv: list[str]) -> int:
         parser.error("--bundle-output requires --task-file")
     if task is not None and args.task_id and args.task_id != task.task_id:
         parser.error("--task-id does not match --task-file task_id")
-
     report = evaluate_submission(manifest, submission, model_id=args.model_id, task_contract=task)
     save_report(report, args.output)
     bundle_id = None
@@ -98,6 +97,23 @@ def _verify(argv: list[str]) -> int:
     return 0 if not errors else 1
 
 
+def _verify_benchmark(argv: list[str]) -> int:
+    parser = argparse.ArgumentParser(prog="cardieval verify-benchmark")
+    parser.add_argument("--package", required=True)
+    parser.add_argument("--root", default=".")
+    args = parser.parse_args(argv)
+    package = load_package(args.package)
+    errors = verify_package_artifacts(package, args.root)
+    print(json.dumps({
+        "ok": not errors,
+        "benchmark_id": package.benchmark_id,
+        "version": package.version,
+        "tasks": [task.task_id for task in package.tasks],
+        "errors": errors,
+    }))
+    return 0 if not errors else 1
+
+
 def main() -> int:
     argv = sys.argv[1:]
     if argv and argv[0] == "publish":
@@ -106,6 +122,8 @@ def main() -> int:
         return _compare(argv[1:])
     if argv and argv[0] == "verify":
         return _verify(argv[1:])
+    if argv and argv[0] == "verify-benchmark":
+        return _verify_benchmark(argv[1:])
     return _evaluate(argv)
 
 
