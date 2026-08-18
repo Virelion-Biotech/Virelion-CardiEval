@@ -8,7 +8,7 @@ from pathlib import Path
 from pydantic import BaseModel, ConfigDict, Field
 
 from .bundle import SubmissionBundle
-from .leaderboard import Leaderboard, LeaderboardEntry
+from .leaderboard import Leaderboard, build_leaderboard
 from .registry import BenchmarkTask
 
 
@@ -38,18 +38,17 @@ def ingest_bundles(
     accepted: list[SubmissionBundle] = []
     seen_models: set[str] = set()
     seen_bundles: set[str] = set()
+    seen_splits: set[str] = set()
     for bundle in bundles:
-        task.validate_manifest(
-            bundle.report.model_copy(
-                update={
-                    "benchmark_id": bundle.benchmark_id,
-                    "benchmark_version": bundle.benchmark_version,
-                }
-            )
-        )
+        if bundle.benchmark_id != task.benchmark_id or bundle.benchmark_version != task.version:
+            raise ValueError("bundle benchmark identity does not match task")
+        if bundle.benchmark_sha256 != bundle.report.benchmark_sha256:
+            raise ValueError("bundle benchmark_sha256 does not match report")
+        task.validate_manifest(bundle.report.model_copy())
         if bundle.task_id != task.task_id:
             raise ValueError(f"bundle task_id {bundle.task_id!r} does not match {task.task_id!r}")
-        if task.primary_metric not in {metric.name for metric in bundle.report.metrics}:
+        metric_names = {metric.name for metric in bundle.report.metrics}
+        if task.primary_metric not in metric_names:
             raise ValueError(
                 f"bundle for {bundle.model_id!r} is missing primary metric {task.primary_metric!r}"
             )
@@ -59,9 +58,12 @@ def ingest_bundles(
             raise ValueError(f"duplicate model_id in publication set: {bundle.model_id}")
         seen_bundles.add(bundle.bundle_id)
         seen_models.add(bundle.model_id)
+        seen_splits.add(bundle.report.split)
         accepted.append(bundle)
     if not accepted:
         raise ValueError("At least one bundle is required")
+    if len(seen_splits) != 1:
+        raise ValueError("all bundles in a publication set must use the same split")
     return accepted
 
 
@@ -72,7 +74,11 @@ def publish_leaderboard(
     """Create a publication-ready leaderboard from validated bundles."""
     accepted = ingest_bundles(bundles, task)
     reports = [bundle.report for bundle in accepted]
-    leaderboard = _build_from_primary_metric(reports, task)
+    leaderboard = build_leaderboard(
+        reports,
+        metric=task.primary_metric,
+        direction=task.primary_direction,
+    )
     return LeaderboardSnapshot(
         benchmark_id=task.benchmark_id,
         benchmark_version=task.version,
@@ -87,21 +93,11 @@ def publish_leaderboard(
     )
 
 
-def _build_from_primary_metric(reports, task: BenchmarkTask) -> Leaderboard:
-    from .leaderboard import build_leaderboard
-
-    return build_leaderboard(
-        reports,
-        metric=task.primary_metric,
-        direction=task.primary_direction,
-    )
-
-
 def load_bundle(path: str | Path) -> SubmissionBundle:
     """Load and validate a serialized SubmissionBundle."""
     return SubmissionBundle.model_validate_json(Path(path).read_text(encoding="utf-8"))
 
 
 def save_snapshot(snapshot: LeaderboardSnapshot, path: str | Path) -> None:
-    """Write a publication snapshot as canonical JSON."""
+    """Write a publication snapshot as JSON."""
     Path(path).write_text(snapshot.model_dump_json(indent=2), encoding="utf-8")
