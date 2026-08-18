@@ -1,5 +1,5 @@
 from cardiEval.calibration_curves import calibration_curve
-from cardiEval.stress import aggregate_stress, compare_stress
+from cardieval.stress import aggregate_stress, compare_stress
 
 
 def test_calibration_curve_has_expected_bins():
