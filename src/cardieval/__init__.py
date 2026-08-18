@@ -11,6 +11,7 @@ from .leaderboard import Leaderboard, LeaderboardEntry, build_leaderboard
 from .models import BenchmarkManifest, MetricResult, ModelComparison, PredictionRecord, SubgroupResult
 from .multiple_testing import benjamini_hochberg, bonferroni
 from .publication import LeaderboardSnapshot, ingest_bundles, load_bundle, publish_leaderboard, save_snapshot
+from .publication_history import LeaderboardDelta, PublicationComparison, compare_snapshots, load_snapshot, save_comparison, snapshot_hash
 from .ranking import hit_rate_at_k, ndcg_at_k, reciprocal_rank
 from .provenance import artifact_manifest, canonical_json_hash, evaluation_fingerprint, sha256_text
 from .registry import BenchmarkTask, TaskRegistry
@@ -24,11 +25,13 @@ __all__ = [
     "ComparisonReport",
     "EvaluationReport",
     "Leaderboard",
+    "LeaderboardDelta",
     "LeaderboardEntry",
     "LeaderboardSnapshot",
     "MetricResult",
     "ModelComparison",
     "PredictionRecord",
+    "PublicationComparison",
     "StressResult",
     "SubgroupResult",
     "SubmissionBundle",
@@ -44,6 +47,7 @@ __all__ = [
     "calibration_curve",
     "canonical_json_hash",
     "compare_predictions",
+    "compare_snapshots",
     "compare_stress",
     "evaluate_submission",
     "evaluation_fingerprint",
@@ -51,15 +55,18 @@ __all__ = [
     "hit_rate_at_k",
     "ingest_bundles",
     "load_bundle",
+    "load_snapshot",
     "ndcg_at_k",
     "paired_difference_ci",
     "publish_leaderboard",
     "reciprocal_rank",
     "relative_drop",
     "save_bundle",
+    "save_comparison",
     "save_snapshot",
     "sha256_text",
+    "snapshot_hash",
     "subgroup_robustness",
 ]
 
-__version__ = "0.8.0"
+__version__ = "0.9.0"
