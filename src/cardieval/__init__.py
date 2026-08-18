@@ -1,6 +1,7 @@
 """CardiEval: independent evaluation for cardiac challenge models."""
 
 from .benchmark_package import BenchmarkArtifact, BenchmarkPackage, fingerprint_directory, load_package, validate_submission_against_package, verify_package_artifacts
+from .bridge import BridgeCapabilities, BridgeEnvelope, PredictionSubmission, build_submission_envelope, negotiate_capabilities, validate_envelope
 from .bundle import SubmissionBundle, build_bundle, save_bundle
 from .calibration import brier_score, expected_calibration_error
 from .calibration_curves import CalibrationBin, calibration_curve
@@ -27,21 +28,21 @@ from .stress import StressResult, aggregate_stress, compare_stress
 
 __all__ = [
     "ArtifactRecord", "BenchmarkArtifact", "BenchmarkManifest", "BenchmarkPackage", "BenchmarkScore",
-    "BenchmarkTask", "CalibrationBin", "ComparisonDecision", "ComparisonReport", "EvaluationReport",
-    "EvaluationRunManifest", "Leaderboard", "LeaderboardDelta", "LeaderboardEntry", "LeaderboardSnapshot",
-    "MetricResult", "ModelComparison", "ModelScorecard", "PredictionRecord", "PublicationComparison",
-    "QualityGate", "ReleaseGateReport", "ReleaseManifest", "Scorecard", "StressResult", "SubgroupResult",
-    "SubmissionBundle", "TaskRegistry", "aggregate_stress", "artifact_manifest", "benjamini_hochberg",
-    "brier_score", "bonferroni", "build_bundle", "build_comparison_report", "build_leaderboard",
-    "build_release_manifest", "build_run_manifest", "build_scorecard", "calibration_curve", "canonical_json_hash",
-    "cohen_kappa", "compare_predictions", "compare_snapshots", "compare_stress", "confusion_matrix_counts",
-    "decide_comparison", "evaluate_release_gates", "evaluate_submission", "evaluation_fingerprint",
-    "fingerprint_directory", "fingerprint_file", "hit_rate_at_k", "ingest_bundles", "load_bundle", "load_package",
-    "load_snapshot", "matthews_correlation", "negative_predictive_value", "ndcg_at_k", "paired_difference_ci",
-    "positive_predictive_value", "publish_leaderboard", "reciprocal_rank", "relative_drop", "run_evaluation",
-    "save_bundle", "save_comparison", "save_run_manifest", "save_snapshot", "sensitivity", "sha256_text",
-    "snapshot_hash", "specificity", "subgroup_robustness", "validate_submission_against_package",
-    "verify_package_artifacts", "verify_release_manifest",
+    "BenchmarkTask", "BridgeCapabilities", "BridgeEnvelope", "CalibrationBin", "ComparisonDecision",
+    "ComparisonReport", "EvaluationReport", "EvaluationRunManifest", "Leaderboard", "LeaderboardDelta",
+    "LeaderboardEntry", "LeaderboardSnapshot", "MetricResult", "ModelComparison", "ModelScorecard",
+    "PredictionRecord", "PredictionSubmission", "PublicationComparison", "QualityGate", "ReleaseGateReport",
+    "ReleaseManifest", "Scorecard", "StressResult", "SubgroupResult", "SubmissionBundle", "TaskRegistry",
+    "aggregate_stress", "artifact_manifest", "benjamini_hochberg", "brier_score", "bonferroni", "build_bundle",
+    "build_comparison_report", "build_leaderboard", "build_release_manifest", "build_run_manifest", "build_scorecard",
+    "build_submission_envelope", "calibration_curve", "canonical_json_hash", "cohen_kappa", "compare_predictions",
+    "compare_snapshots", "compare_stress", "confusion_matrix_counts", "decide_comparison", "evaluate_release_gates",
+    "evaluate_submission", "evaluation_fingerprint", "fingerprint_directory", "fingerprint_file", "hit_rate_at_k",
+    "ingest_bundles", "load_bundle", "load_package", "load_snapshot", "matthews_correlation", "negotiate_capabilities",
+    "negative_predictive_value", "ndcg_at_k", "paired_difference_ci", "positive_predictive_value", "publish_leaderboard",
+    "reciprocal_rank", "relative_drop", "run_evaluation", "save_bundle", "save_comparison", "save_run_manifest",
+    "save_snapshot", "sensitivity", "sha256_text", "snapshot_hash", "specificity", "subgroup_robustness",
+    "validate_envelope", "validate_submission_against_package", "verify_package_artifacts", "verify_release_manifest",
 ]
 
-__version__ = "1.3.0"
+__version__ = "1.4.0"
