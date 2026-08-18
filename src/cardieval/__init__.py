@@ -1,5 +1,6 @@
 """CardiEval: independent evaluation for cardiac challenge models."""
 
+from .bundle import SubmissionBundle, build_bundle, save_bundle
 from .calibration import brier_score, expected_calibration_error
 from .calibration_curves import CalibrationBin, calibration_curve
 from .comparison import compare_predictions
@@ -19,7 +20,6 @@ __all__ = [
     "BenchmarkManifest",
     "BenchmarkTask",
     "CalibrationBin",
-    "CalibrationBin",
     "ComparisonReport",
     "EvaluationReport",
     "Leaderboard",
@@ -29,16 +29,18 @@ __all__ = [
     "PredictionRecord",
     "StressResult",
     "SubgroupResult",
+    "SubmissionBundle",
     "TaskRegistry",
     "aggregate_stress",
     "artifact_manifest",
     "benjamini_hochberg",
     "brier_score",
-    "build_comparison_report",
-    "canonical_json_hash",
     "bonferroni",
+    "build_bundle",
+    "build_comparison_report",
     "build_leaderboard",
     "calibration_curve",
+    "canonical_json_hash",
     "compare_predictions",
     "compare_stress",
     "evaluate_submission",
@@ -49,8 +51,9 @@ __all__ = [
     "paired_difference_ci",
     "reciprocal_rank",
     "relative_drop",
+    "save_bundle",
     "sha256_text",
     "subgroup_robustness",
 ]
 
-__version__ = "0.5.0"
+__version__ = "0.6.0"
