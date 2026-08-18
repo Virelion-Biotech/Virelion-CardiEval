@@ -21,6 +21,7 @@ from .metrics import (
 )
 from .models import BenchmarkManifest, EvaluationReport, MetricResult, PredictionRecord, SubgroupResult
 from .ranking import hit_rate_at_k, ndcg_at_k, reciprocal_rank
+from .registry import BenchmarkTask
 from .stats import bootstrap_ci
 
 CLASSIFICATION_METRICS = {"accuracy": accuracy, "balanced_accuracy": balanced_accuracy, "macro_f1": macro_f1}
@@ -89,10 +90,12 @@ def _classification_metrics(records: Sequence[PredictionRecord]) -> list[MetricR
 def _regression_metrics(records: Sequence[PredictionRecord]) -> list[MetricResult]:
     yt = np.asarray([float(r.y_true) for r in records])
     yp = np.asarray([float(r.y_pred) for r in records])
-    return [
-        MetricResult(name=name, value=fn(yt, yp), ci_low=bootstrap_ci(yt, yp, fn, seed=0)[0], ci_high=bootstrap_ci(yt, yp, fn, seed=0)[1], n=len(records), direction=METRIC_DIRECTIONS[name])
-        for name, fn in REGRESSION_METRICS.items()
-    ]
+    results: list[MetricResult] = []
+    for name, fn in REGRESSION_METRICS.items():
+        value = fn(yt, yp)
+        low, high = bootstrap_ci(yt, yp, fn, seed=0)
+        results.append(MetricResult(name=name, value=value, ci_low=low, ci_high=high, n=len(records), direction=METRIC_DIRECTIONS[name]))
+    return results
 
 
 def _ranking_metrics(records: Sequence[PredictionRecord]) -> list[MetricResult]:
@@ -139,8 +142,18 @@ def _subgroup_results(records: Sequence[PredictionRecord], task: str, *, min_n: 
     return results
 
 
-def evaluate_submission(manifest: BenchmarkManifest, records: Sequence[PredictionRecord], *, model_id: str, subgroup_min_n: int = 10) -> EvaluationReport:
+def evaluate_submission(
+    manifest: BenchmarkManifest,
+    records: Sequence[PredictionRecord],
+    *,
+    model_id: str,
+    subgroup_min_n: int = 10,
+    task_contract: BenchmarkTask | None = None,
+) -> EvaluationReport:
+    """Evaluate a submission, optionally enforcing a registered task contract."""
     _assert_alignment(manifest, records)
+    if task_contract is not None:
+        task_contract.validate_manifest(manifest)
     ordered = _order_records(manifest, records)
     if manifest.task in {"classification", "binary_classification"}:
         metrics = _classification_metrics(ordered)
@@ -150,16 +163,39 @@ def evaluate_submission(manifest: BenchmarkManifest, records: Sequence[Predictio
         metrics = _ranking_metrics(ordered)
     else:
         raise NotImplementedError(f"Task type not implemented yet: {manifest.task}")
+
+    if task_contract is not None:
+        disallowed = sorted({metric.name for metric in metrics} - set(task_contract.allowed_metrics))
+        if disallowed:
+            raise ValueError(f"Evaluator produced metrics not allowed by task contract: {disallowed}")
+        metric_by_name = {metric.name: metric for metric in metrics}
+        primary = metric_by_name.get(task_contract.primary_metric)
+        if primary is None:
+            raise ValueError(f"Primary metric {task_contract.primary_metric!r} was not produced by evaluator")
+        primary_metric = task_contract.primary_metric
+        primary_value = primary.value
+        primary_direction = task_contract.primary_direction
+        task_id = task_contract.task_id
+    else:
+        primary_metric = None
+        primary_value = None
+        primary_direction = None
+        task_id = None
+
     subgroups = _subgroup_results(ordered, manifest.task, min_n=subgroup_min_n)
     warnings = [f"Subgroup '{item.subgroup}': {item.warning}" for item in subgroups if item.warning]
     return EvaluationReport(
-        evaluator_version="0.3.0",
+        evaluator_version="0.4.0",
         benchmark_id=manifest.benchmark_id,
         benchmark_version=manifest.version,
         benchmark_sha256=manifest.dataset_sha256,
         task=manifest.task,
         split=manifest.split,
         model_id=model_id,
+        task_id=task_id,
+        primary_metric=primary_metric,
+        primary_value=primary_value,
+        primary_direction=primary_direction,
         metrics=metrics,
         subgroups=subgroups,
         warnings=warnings,
