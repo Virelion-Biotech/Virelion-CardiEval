@@ -2,7 +2,7 @@
 
 **Independent evaluation infrastructure for cardiac challenge models.**
 
-CardiEval is the evaluation layer of the Virelion cardiac AI stack. Its job is to judge model outputs independently from the code that produced them, using immutable benchmark manifests, strict submission contracts, reproducible metrics, uncertainty intervals, robustness checks, statistical comparison utilities, auditable leaderboard rules, self-contained evaluation bundles, publication snapshots, historical comparison, and release integrity verification.
+CardiEval is the evaluation layer of the Virelion cardiac AI stack. Its job is to judge model outputs independently from the code that produced them, using immutable benchmark manifests, strict submission contracts, reproducible metrics, uncertainty intervals, robustness checks, statistical comparison utilities, auditable leaderboard rules, self-contained evaluation bundles, publication snapshots, historical comparison, release integrity verification, and explicit statistical decision policies.
 
 ## Architecture
 
@@ -14,9 +14,9 @@ Submission JSONL --> validation --> metric engine --> confidence intervals
                                       |                       |
                                       +--> calibration        +--> subgroup robustness
                                       |                       |
-                                      +--> model comparison  +--> corrected significance
+                                      +--> diagnostic metrics +--> stress/shift analysis
                                       |                       |
-                                      +--> ranking metrics   +--> stress/shift analysis
+                                      +--> model comparison  +--> corrected significance
                                       v                       |
                               EvaluationReport               |
                                       |                       |
@@ -31,18 +31,21 @@ Submission JSONL --> validation --> metric engine --> confidence intervals
                                                                       +--> release manifest --> verification
 ```
 
-## 1.0 core
+## 1.1 core
 
 - Strict `PredictionRecord` and `BenchmarkManifest` schemas with Pydantic.
 - Exact sample-set validation to catch missing, duplicated, or out-of-benchmark predictions.
 - Versioned `BenchmarkTask` contracts defining task type, allowed metrics, primary metric/direction, and permitted splits.
 - Task-contract enforcement inside `evaluate_submission`.
 - Classification metrics: accuracy, balanced accuracy, macro-F1, AUROC, AUPRC.
+- Binary diagnostic metrics: sensitivity, specificity, positive/negative predictive value, MCC, Cohen's kappa, and explicit confusion-matrix counts.
 - Calibration metrics: Brier score and expected calibration error (ECE), plus reliability bins.
 - Regression metrics: MAE and RMSE.
 - Ranking metrics: reciprocal rank (MRR), hit rate@10, and NDCG@10.
 - Seeded percentile bootstrap confidence intervals.
 - Paired metric-difference confidence intervals for model-vs-model comparisons.
+- Explicit superiority/non-inferiority/inferiority/inconclusive decision rules with metric-direction handling and optional multiplicity-adjusted p-values.
+- Release quality gates for evaluation integrity, artifact verification, primary-metric presence, and subgroup warnings.
 - Declared subgroup evaluation with minimum-size warnings.
 - Robustness and stress/shift analysis with direction-aware degradation.
 - Paired permutation testing and optional Wilcoxon testing when an explicit sample-wise score/loss is supplied.
@@ -66,7 +69,7 @@ A registered task definition is authoritative for scoring. For example:
   "version": "1.0.0",
   "task_id": "binary-challenge-detection",
   "task_type": "binary_classification",
-  "allowed_metrics": ["accuracy", "balanced_accuracy", "macro_f1", "auroc", "auprc", "brier", "ece"],
+  "allowed_metrics": ["accuracy", "balanced_accuracy", "macro_f1", "auroc", "auprc", "brier", "ece", "sensitivity", "specificity"],
   "primary_metric": "auroc",
   "primary_direction": "higher_is_better",
   "splits": ["validation", "test"]
@@ -74,6 +77,14 @@ A registered task definition is authoritative for scoring. For example:
 ```
 
 The evaluator verifies benchmark identity, version, task type, permitted split, allowed metric contract, and the declared primary metric before producing a contract-aware report.
+
+## Statistical decision policy
+
+CardiEval separates descriptive score differences from claims of superiority. Differences are oriented so positive values always favor model A. A declared confidence interval, decision margin, alpha level, and optional multiplicity-adjusted p-value can be passed to the decision layer to classify comparisons as superior, non-inferior, inconclusive, or inferior.
+
+These are evaluation rules, not clinical approval criteria. Passing a CardiEval gate does not establish clinical safety, effectiveness, or readiness for patient care.
+
+See `docs/DECISION_POLICY.md` for the formal policy.
 
 ## Publication and history
 
@@ -140,11 +151,11 @@ Every stage carries stable identity fields and/or cryptographic hashes. CardiEva
 1. **Independent:** evaluation consumes model outputs, not model internals.
 2. **Reproducible:** seeds, benchmark versions, evaluator versions, artifact hashes, and evaluation fingerprints are explicit.
 3. **Leakage-resistant:** exact benchmark membership is checked before scoring.
-4. **Statistically honest:** uncertainty and paired tests are explicit rather than relying on a single point estimate.
+4. **Statistically honest:** uncertainty, multiplicity correction, and explicit decision rules are preferred to unsupported winner claims.
 5. **Robustness-aware:** subgroup performance and small-cell warnings are reported instead of hiding heterogeneity.
 6. **Leaderboard-safe:** scoring contracts are versioned and publication sets reject incompatible or duplicate results.
-7. **Composable:** the report, bundle, publication, scorecard, and release schemas are designed as contracts for CardiBench/CardiBridge and audit inputs for CardiTrace.
+7. **Composable:** the report, bundle, publication, scorecard, release, and decision schemas are designed as contracts for CardiBench/CardiBridge and audit inputs for CardiTrace.
 
 ## Documentation
 
-See `docs/EVALUATION_PROTOCOL.md` for the evaluation contract and `schemas/` for machine-readable publication/release schemas.
+See `docs/EVALUATION_PROTOCOL.md`, `docs/DECISION_POLICY.md`, and `schemas/` for the formal evaluation, decision, and machine-readable contracts.
