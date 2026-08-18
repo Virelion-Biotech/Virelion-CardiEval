@@ -75,7 +75,7 @@ class ModelComparison(BaseModel):
 class EvaluationReport(BaseModel):
     """Serializable, provenance-aware result produced by the evaluator."""
 
-    schema_version: str = "0.2"
+    schema_version: str = "0.3"
     evaluator_version: str
     benchmark_id: str
     benchmark_version: str
@@ -83,6 +83,10 @@ class EvaluationReport(BaseModel):
     task: TaskType
     split: SplitName
     model_id: str
+    task_id: str | None = None
+    primary_metric: str | None = None
+    primary_value: float | None = None
+    primary_direction: str | None = None
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     metrics: list[MetricResult]
     subgroups: list[SubgroupResult] = Field(default_factory=list)
