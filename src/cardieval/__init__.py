@@ -7,66 +7,32 @@ from .comparison import compare_predictions
 from .comparison_report import ComparisonReport, build_comparison_report
 from .confidence import paired_difference_ci
 from .evaluator import EvaluationReport, evaluate_submission
+from .history import ModelMovement, PublicationComparison, compare_snapshots, load_snapshot, save_comparison, snapshot_id
+from .integrity import ArtifactRecord, ReleaseManifest, build_release_manifest, fingerprint_file, verify_release_manifest
 from .leaderboard import Leaderboard, LeaderboardEntry, build_leaderboard
 from .models import BenchmarkManifest, MetricResult, ModelComparison, PredictionRecord, SubgroupResult
 from .multiple_testing import benjamini_hochberg, bonferroni
 from .publication import LeaderboardSnapshot, ingest_bundles, load_bundle, publish_leaderboard, save_snapshot
-from .publication_history import LeaderboardDelta, PublicationComparison, compare_snapshots, load_snapshot, save_comparison, snapshot_hash
 from .ranking import hit_rate_at_k, ndcg_at_k, reciprocal_rank
 from .provenance import artifact_manifest, canonical_json_hash, evaluation_fingerprint, sha256_text
 from .registry import BenchmarkTask, TaskRegistry
 from .robustness import relative_drop, subgroup_robustness
+from .scorecard import BenchmarkScore, ModelScorecard, Scorecard, build_scorecard
 from .stress import StressResult, aggregate_stress, compare_stress
 
 __all__ = [
-    "BenchmarkManifest",
-    "BenchmarkTask",
-    "CalibrationBin",
-    "ComparisonReport",
-    "EvaluationReport",
-    "Leaderboard",
-    "LeaderboardDelta",
-    "LeaderboardEntry",
-    "LeaderboardSnapshot",
-    "MetricResult",
-    "ModelComparison",
-    "PredictionRecord",
-    "PublicationComparison",
-    "StressResult",
-    "SubgroupResult",
-    "SubmissionBundle",
-    "TaskRegistry",
-    "aggregate_stress",
-    "artifact_manifest",
-    "benjamini_hochberg",
-    "brier_score",
-    "bonferroni",
-    "build_bundle",
-    "build_comparison_report",
-    "build_leaderboard",
-    "calibration_curve",
-    "canonical_json_hash",
-    "compare_predictions",
-    "compare_snapshots",
-    "compare_stress",
-    "evaluate_submission",
-    "evaluation_fingerprint",
-    "expected_calibration_error",
-    "hit_rate_at_k",
-    "ingest_bundles",
-    "load_bundle",
-    "load_snapshot",
-    "ndcg_at_k",
-    "paired_difference_ci",
-    "publish_leaderboard",
-    "reciprocal_rank",
-    "relative_drop",
-    "save_bundle",
-    "save_comparison",
-    "save_snapshot",
-    "sha256_text",
-    "snapshot_hash",
-    "subgroup_robustness",
+    "ArtifactRecord", "BenchmarkManifest", "BenchmarkScore", "BenchmarkTask", "CalibrationBin",
+    "ComparisonReport", "EvaluationReport", "Leaderboard", "LeaderboardEntry", "LeaderboardSnapshot",
+    "MetricResult", "ModelComparison", "ModelMovement", "ModelScorecard", "PredictionRecord",
+    "PublicationComparison", "ReleaseManifest", "Scorecard", "StressResult", "SubgroupResult",
+    "SubmissionBundle", "TaskRegistry", "aggregate_stress", "artifact_manifest", "benjamini_hochberg",
+    "brier_score", "bonferroni", "build_bundle", "build_comparison_report", "build_leaderboard",
+    "build_release_manifest", "build_scorecard", "calibration_curve", "canonical_json_hash",
+    "compare_predictions", "compare_snapshots", "compare_stress", "evaluate_submission",
+    "evaluation_fingerprint", "expected_calibration_error", "fingerprint_file", "hit_rate_at_k",
+    "ingest_bundles", "load_bundle", "load_snapshot", "ndcg_at_k", "paired_difference_ci",
+    "publish_leaderboard", "reciprocal_rank", "relative_drop", "save_bundle", "save_comparison",
+    "save_snapshot", "sha256_text", "snapshot_id", "subgroup_robustness", "verify_release_manifest",
 ]
 
-__version__ = "0.9.0"
+__version__ = "1.0.0"
