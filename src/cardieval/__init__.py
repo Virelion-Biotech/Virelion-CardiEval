@@ -6,9 +6,11 @@ from .evaluator import EvaluationReport, evaluate_submission
 from .leaderboard import Leaderboard, LeaderboardEntry, build_leaderboard
 from .models import BenchmarkManifest, MetricResult, ModelComparison, PredictionRecord, SubgroupResult
 from .multiple_testing import benjamini_hochberg, bonferroni
+from .registry import BenchmarkTask, TaskRegistry
 
 __all__ = [
     "BenchmarkManifest",
+    "BenchmarkTask",
     "EvaluationReport",
     "Leaderboard",
     "LeaderboardEntry",
@@ -16,6 +18,7 @@ __all__ = [
     "ModelComparison",
     "PredictionRecord",
     "SubgroupResult",
+    "TaskRegistry",
     "benjamini_hochberg",
     "brier_score",
     "bonferroni",
