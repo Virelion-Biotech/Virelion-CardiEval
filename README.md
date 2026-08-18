@@ -2,7 +2,7 @@
 
 **Independent evaluation infrastructure for cardiac challenge models.**
 
-CardiEval is the evaluation layer of the Virelion cardiac AI stack. Its job is to judge model outputs independently from the code that produced them, using immutable benchmark manifests, strict submission contracts, reproducible metrics, uncertainty intervals, robustness checks, statistical comparison utilities, auditable leaderboard rules, self-contained evaluation bundles, publication snapshots, and historical publication tracking.
+CardiEval is the evaluation layer of the Virelion cardiac AI stack. Its job is to judge model outputs independently from the code that produced them, using immutable benchmark manifests, strict submission contracts, reproducible metrics, uncertainty intervals, robustness checks, statistical comparison utilities, auditable leaderboard rules, self-contained evaluation bundles, publication snapshots, historical comparison, and release integrity verification.
 
 ## Architecture
 
@@ -25,38 +25,40 @@ Submission JSONL --> validation --> metric engine --> confidence intervals
                                       +--> task registry --> leaderboard --> publication snapshot
                                                                       |
                                                                       +--> historical comparison
+                                                                      |
+                                                                      +--> cross-benchmark scorecard
+                                                                      |
+                                                                      +--> release manifest --> verification
 ```
 
-## Current core
+## 1.0 core
 
 - Strict `PredictionRecord` and `BenchmarkManifest` schemas with Pydantic.
 - Exact sample-set validation to catch missing, duplicated, or out-of-benchmark predictions.
 - Versioned `BenchmarkTask` contracts defining task type, allowed metrics, primary metric/direction, and permitted splits.
-- Task-contract enforcement inside `evaluate_submission`, not just in the registry or CLI.
+- Task-contract enforcement inside `evaluate_submission`.
 - Classification metrics: accuracy, balanced accuracy, macro-F1, AUROC, AUPRC.
-- Calibration metrics: Brier score and expected calibration error (ECE).
-- Calibration-curve/reliability-bin output for probabilistic binary models.
+- Calibration metrics: Brier score and expected calibration error (ECE), plus reliability bins.
 - Regression metrics: MAE and RMSE.
 - Ranking metrics: reciprocal rank (MRR), hit rate@10, and NDCG@10.
 - Seeded percentile bootstrap confidence intervals.
 - Paired metric-difference confidence intervals for model-vs-model comparisons.
 - Declared subgroup evaluation with minimum-size warnings.
-- Robustness summaries for subgroup spread and relative degradation under perturbation.
-- Stress/shift comparison utilities with direction-aware degradation and aggregate stress scores.
-- Paired permutation testing for model-vs-model comparisons.
-- Optional paired Wilcoxon testing only when an explicit sample-wise score/loss is supplied; aggregate metrics such as AUROC and macro-F1 are never treated as per-sample quantities.
+- Robustness and stress/shift analysis with direction-aware degradation.
+- Paired permutation testing and optional Wilcoxon testing when an explicit sample-wise score/loss is supplied.
 - Bonferroni and Benjamini-Hochberg multiple-testing correction.
-- Deterministic leaderboard aggregation with mean repeated-report scores, stable ranking, and tie handling.
-- Strict `SubmissionBundle` ingestion for publication, including duplicate-model and split consistency checks.
+- Deterministic leaderboard aggregation and task-controlled primary scoring.
+- `SubmissionBundle` ingestion with benchmark/task/hash/split/model consistency checks.
 - Immutable `LeaderboardSnapshot` publication artifacts.
 - Deterministic snapshot integrity hashes and historical rank/score delta reports.
-- CLI support for evaluation, bundle publication, and historical comparison.
-- SHA-256 benchmark/artifact fingerprinting, canonical JSON hashing, and deterministic evaluation fingerprints.
-- Python 3.10-3.12 CI with linting and tests.
+- Cross-benchmark `Scorecard` aggregation with per-benchmark normalization and mean-rank reporting.
+- `ReleaseManifest` artifact records with SHA-256 and size verification.
+- CLI commands for evaluation, publication, historical comparison, and integrity verification.
+- Machine-readable JSON schemas and an explicit evaluation protocol.
 
 ## Task contract
 
-A registered task definition is JSON and is authoritative for scoring. For example:
+A registered task definition is authoritative for scoring. For example:
 
 ```json
 {
@@ -71,17 +73,17 @@ A registered task definition is JSON and is authoritative for scoring. For examp
 }
 ```
 
-The evaluator verifies benchmark identity, version, task type, permitted split, allowed metrics, and the existence of the declared primary metric before producing a contract-aware report.
+The evaluator verifies benchmark identity, version, task type, permitted split, allowed metric contract, and the declared primary metric before producing a contract-aware report.
 
-## Leaderboard publication
+## Publication and history
 
-Validated `SubmissionBundle` files can be ingested as a publication set. CardiEval checks benchmark/version identity, benchmark hash consistency, task identity, split consistency, primary-metric availability, unique models, and unique bundle IDs before ranking.
+Validated `SubmissionBundle` files can be published into a leaderboard snapshot. CardiEval rejects incompatible benchmark/task identities, inconsistent benchmark hashes, duplicate bundle IDs, duplicate models, missing primary metrics, and mixed splits.
 
-A publication snapshot is deterministic and can be compared to a previous snapshot to produce model-by-model rank and score deltas. Each snapshot has an integrity hash, allowing downstream systems to detect changed publication state.
+Snapshots are deterministically hashed. Historical comparison reports track rank changes, score changes, new models, and removed models. Multiple snapshots can also be combined into a cross-benchmark `Scorecard`.
 
-## Run locally
+## CLI
 
-Evaluate a submission and emit a bundle:
+Evaluate a model and optionally emit an interoperable bundle:
 
 ```bash
 cardieval \
@@ -93,31 +95,45 @@ cardieval \
   --bundle-output cardiEval-bundle.json
 ```
 
-Publish all JSON bundles in a directory into a leaderboard snapshot:
+Publish bundles from a directory:
 
 ```bash
-cardieval \
-  --publish-bundle-dir ./bundles \
+cardieval publish \
   --task-file examples/demo_task.json \
-  --snapshot-output leaderboard.json
+  --bundles-dir ./bundles \
+  --output leaderboard.json
 ```
 
-Publish and compare against a previous snapshot:
+Compare two publication snapshots:
 
 ```bash
-cardieval \
-  --publish-bundle-dir ./bundles \
-  --task-file examples/demo_task.json \
-  --snapshot-output leaderboard.json \
-  --compare-snapshot previous-leaderboard.json \
-  --comparison-output leaderboard-delta.json
+cardieval compare \
+  --previous previous-leaderboard.json \
+  --current leaderboard.json \
+  --output leaderboard-delta.json
 ```
 
-Or run the test suite:
+Verify a release manifest against local artifacts:
+
+```bash
+cardieval verify \
+  --manifest release-manifest.json \
+  --root .
+```
+
+Run tests with:
 
 ```bash
 pytest
 ```
+
+## Reproducibility boundary
+
+The intended traceability chain is:
+
+`BenchmarkManifest → BenchmarkTask → Submission JSONL → EvaluationReport → SubmissionBundle → LeaderboardSnapshot → ReleaseManifest`
+
+Every stage carries stable identity fields and/or cryptographic hashes. CardiEval provides integrity verification of published artifacts; cryptographic signing and external key management are intentionally separate concerns.
 
 ## Design principles
 
@@ -127,8 +143,8 @@ pytest
 4. **Statistically honest:** uncertainty and paired tests are explicit rather than relying on a single point estimate.
 5. **Robustness-aware:** subgroup performance and small-cell warnings are reported instead of hiding heterogeneity.
 6. **Leaderboard-safe:** scoring contracts are versioned and publication sets reject incompatible or duplicate results.
-7. **Composable:** the report, bundle, and publication schemas are designed as contracts for CardiBench/CardiBridge and audit inputs for CardiTrace.
+7. **Composable:** the report, bundle, publication, scorecard, and release schemas are designed as contracts for CardiBench/CardiBridge and audit inputs for CardiTrace.
 
-## Roadmap
+## Documentation
 
-Next: richer stress/shift suites, correction-aware decision rules, signed artifact verification, and full CardiBench/CardiAgent/CardiVex integration.
+See `docs/EVALUATION_PROTOCOL.md` for the evaluation contract and `schemas/` for machine-readable publication/release schemas.
