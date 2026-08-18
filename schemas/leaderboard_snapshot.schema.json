@@ -1,0 +1,20 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "CardiEval LeaderboardSnapshot",
+  "type": "object",
+  "required": ["schema_version", "benchmark_id", "benchmark_version", "task_id", "split", "primary_metric", "primary_direction", "n_bundles", "n_models", "bundles", "leaderboard"],
+  "properties": {
+    "schema_version": {"type": "string"},
+    "benchmark_id": {"type": "string"},
+    "benchmark_version": {"type": "string"},
+    "task_id": {"type": "string"},
+    "split": {"type": "string"},
+    "primary_metric": {"type": "string"},
+    "primary_direction": {"enum": ["higher_is_better", "lower_is_better"]},
+    "n_bundles": {"type": "integer", "minimum": 1},
+    "n_models": {"type": "integer", "minimum": 1},
+    "bundles": {"type": "array", "items": {"type": "string"}},
+    "leaderboard": {"type": "object"}
+  },
+  "additionalProperties": false
+}
