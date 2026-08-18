@@ -2,7 +2,7 @@
 
 **Independent evaluation infrastructure for cardiac challenge models.**
 
-CardiEval is the evaluation layer of the Virelion cardiac AI stack. Its job is to judge model outputs independently from the code that produced them, using immutable benchmark manifests, strict submission contracts, reproducible metrics, uncertainty intervals, robustness checks, statistical comparison utilities, auditable leaderboard rules, self-contained evaluation bundles, publication snapshots, historical comparison, release integrity verification, explicit statistical decision policies, and CardiBench-compatible benchmark packages.
+CardiEval is the evaluation layer of the Virelion cardiac AI stack. Its job is to judge model outputs independently from the code that produced them, using immutable benchmark manifests, strict submission contracts, reproducible metrics, uncertainty intervals, robustness checks, statistical comparison utilities, auditable leaderboard rules, self-contained evaluation bundles, publication snapshots, historical comparison, release integrity verification, explicit statistical decision policies, CardiBench-compatible benchmark packages, and an end-to-end evaluation runner.
 
 ## Architecture
 
@@ -37,7 +37,7 @@ Submission JSONL ------------> validation
                                                   scorecard         + verification
 ```
 
-## 1.2 core
+## 1.3 core
 
 - Strict `PredictionRecord` and `BenchmarkManifest` schemas with Pydantic.
 - Exact sample-set validation to catch missing, duplicated, or out-of-benchmark predictions.
@@ -64,8 +64,9 @@ Submission JSONL ------------> validation
 - Deterministic snapshot integrity hashes and historical rank/score delta reports.
 - Cross-benchmark `Scorecard` aggregation with per-benchmark normalization and mean-rank reporting.
 - `ReleaseManifest` artifact records with SHA-256 and size verification.
-- CLI commands for evaluation, publication, historical comparison, release verification, and benchmark-package verification.
-- Machine-readable JSON schemas and explicit evaluation/decision/package protocols.
+- **End-to-end `run` pipeline** producing an evaluation report, submission bundle, and deterministic run manifest from a validated benchmark package plus model submission.
+- CLI commands for evaluation, publication, historical comparison, release verification, benchmark-package verification, and end-to-end runs.
+- Machine-readable JSON schemas and explicit evaluation/decision/package/run protocols.
 
 ## CardiBench integration
 
@@ -89,7 +90,31 @@ cardieval verify-benchmark \
   --root ./benchmark-release
 ```
 
-See `docs/CARDIBENCH_INTEGRATION.md` for the full package contract.
+### One-command end-to-end evaluation
+
+The `run` command performs the full protected path:
+
+```text
+verify package → validate submission → evaluate → write report → write bundle → write run manifest
+```
+
+Example:
+
+```bash
+cardieval run \
+  --package benchmark-package.json \
+  --root ./benchmark-release \
+  --submission submission.jsonl \
+  --model-id my-model \
+  --task-id binary-challenge-detection \
+  --report-output outputs/report.json \
+  --bundle-output outputs/bundle.json \
+  --run-output outputs/run.json
+```
+
+`EvaluationRunManifest` records the benchmark package hash, submission hash, evaluation fingerprint, bundle ID, model/task identity, and output paths. This is the canonical machine-readable record for one evaluation event.
+
+See `docs/CARDIBENCH_INTEGRATION.md` for the full package contract and `schemas/evaluation-run-manifest.schema.json` for the run artifact schema.
 
 ## Task contract
 
@@ -164,11 +189,17 @@ cardieval verify \
   --root .
 ```
 
+Run the test suite with:
+
+```bash
+pytest
+```
+
 ## Reproducibility boundary
 
 The intended traceability chain is:
 
-`BenchmarkPackage → BenchmarkManifest → BenchmarkTask → Submission JSONL → EvaluationReport → SubmissionBundle → LeaderboardSnapshot → ReleaseManifest`
+`BenchmarkPackage → BenchmarkManifest → BenchmarkTask → Submission JSONL → EvaluationReport → SubmissionBundle → EvaluationRunManifest → LeaderboardSnapshot → ReleaseManifest`
 
 Every stage carries stable identity fields and/or cryptographic hashes. CardiEval provides integrity verification of published artifacts; cryptographic signing and external key management are intentionally separate concerns.
 
@@ -180,7 +211,7 @@ Every stage carries stable identity fields and/or cryptographic hashes. CardiEva
 4. **Statistically honest:** uncertainty, multiplicity correction, and explicit decision rules are preferred to unsupported winner claims.
 5. **Robustness-aware:** subgroup performance and small-cell warnings are reported instead of hiding heterogeneity.
 6. **Leaderboard-safe:** scoring contracts are versioned and publication sets reject incompatible or duplicate results.
-7. **Composable:** the report, bundle, publication, scorecard, release, decision, and benchmark-package schemas are designed as contracts for CardiBench/CardiBridge and audit inputs for CardiTrace.
+7. **Composable:** the report, bundle, publication, scorecard, release, decision, benchmark-package, and run schemas are designed as contracts for CardiBench/CardiBridge and audit inputs for CardiTrace.
 
 ## Documentation
 
