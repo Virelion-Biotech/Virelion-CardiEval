@@ -5,8 +5,7 @@ from __future__ import annotations
 from collections.abc import Callable, Sequence
 
 import numpy as np
-from scipy.stats import permutation_test, wilcoxon
-
+from scipy.stats import wilcoxon
 
 MetricFn = Callable[[np.ndarray, np.ndarray], float]
 
@@ -19,8 +18,13 @@ def bootstrap_ci(
     n_resamples: int = 2000,
     confidence: float = 0.95,
     seed: int = 0,
+    max_attempts: int | None = None,
 ) -> tuple[float, float]:
-    """Percentile bootstrap CI. Seed is explicit for reproducibility."""
+    """Percentile bootstrap CI with rejection of invalid resamples.
+
+    Rejection matters for metrics such as AUROC that are undefined when a
+    bootstrap sample contains only one class.
+    """
     if n_resamples < 100:
         raise ValueError("n_resamples must be >= 100")
     if not 0 < confidence < 1:
@@ -31,12 +35,23 @@ def bootstrap_ci(
         raise ValueError("paired inputs must have equal, non-zero length")
     rng = np.random.default_rng(seed)
     n = len(yt)
-    values = np.empty(n_resamples, dtype=float)
-    for i in range(n_resamples):
+    max_attempts = max_attempts or n_resamples * 20
+    values: list[float] = []
+    attempts = 0
+    while len(values) < n_resamples and attempts < max_attempts:
+        attempts += 1
         idx = rng.integers(0, n, size=n)
-        values[i] = metric(yt[idx], yp[idx])
+        try:
+            value = float(metric(yt[idx], yp[idx]))
+        except (ValueError, FloatingPointError):
+            continue
+        if np.isfinite(value):
+            values.append(value)
+    if len(values) < max(100, int(n_resamples * 0.8)):
+        raise ValueError("insufficient valid bootstrap resamples for this metric")
+    samples = np.asarray(values)
     alpha = (1 - confidence) / 2
-    return float(np.quantile(values, alpha)), float(np.quantile(values, 1 - alpha))
+    return float(np.quantile(samples, alpha)), float(np.quantile(samples, 1 - alpha))
 
 
 def paired_permutation_pvalue(
@@ -48,34 +63,37 @@ def paired_permutation_pvalue(
     n_resamples: int = 5000,
     seed: int = 0,
 ) -> float:
-    """Two-sided paired permutation test for a model-vs-model metric difference."""
+    """Two-sided paired randomization test for model-vs-model performance."""
+    if n_resamples < 100:
+        raise ValueError("n_resamples must be >= 100")
     yt = np.asarray(y_true)
     a = np.asarray(pred_a)
     b = np.asarray(pred_b)
     if not (len(yt) == len(a) == len(b) and len(yt) > 1):
         raise ValueError("all paired inputs must have the same non-zero length")
 
-    def statistic(x: np.ndarray, y: np.ndarray, axis: int = -1) -> np.ndarray:
-        if axis != -1:
-            x = np.moveaxis(x, axis, -1)
-            y = np.moveaxis(y, axis, -1)
-        if x.ndim == 1:
-            return metric(yt[: x.shape[-1]], x) - metric(yt[: y.shape[-1]], y)
-        return np.array([metric(yt, xi) - metric(yt, yi) for xi, yi in zip(x, y)])
-
-    result = permutation_test(
-        (a, b),
-        statistic,
-        permutation_type="samples",
-        n_resamples=n_resamples,
-        random_state=seed,
-        alternative="two-sided",
-    )
-    return float(result.pvalue)
+    observed = metric(yt, a) - metric(yt, b)
+    rng = np.random.default_rng(seed)
+    extreme = 0
+    valid = 0
+    for _ in range(n_resamples):
+        swap = rng.integers(0, 2, size=len(yt), dtype=np.int8).astype(bool)
+        x = np.where(swap, b, a)
+        y = np.where(swap, a, b)
+        try:
+            difference = metric(yt, x) - metric(yt, y)
+        except (ValueError, FloatingPointError):
+            continue
+        if np.isfinite(difference):
+            valid += 1
+            extreme += int(abs(difference) >= abs(observed))
+    if valid < max(100, int(n_resamples * 0.8)):
+        raise ValueError("insufficient valid permutations for this metric")
+    return float((extreme + 1) / (valid + 1))
 
 
 def wilcoxon_pvalue(sample_a: Sequence[float], sample_b: Sequence[float]) -> float:
-    """Paired Wilcoxon signed-rank test for matched per-sample losses/scores."""
+    """Paired Wilcoxon signed-rank test for matched per-sample scores/losses."""
     a = np.asarray(sample_a, dtype=float)
     b = np.asarray(sample_b, dtype=float)
     if len(a) != len(b) or len(a) < 2:
