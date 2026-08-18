@@ -3,6 +3,7 @@
 from .calibration import brier_score, expected_calibration_error
 from .calibration_curves import CalibrationBin, calibration_curve
 from .comparison import compare_predictions
+from .comparison_report import ComparisonReport, build_comparison_report
 from .confidence import paired_difference_ci
 from .evaluator import EvaluationReport, evaluate_submission
 from .leaderboard import Leaderboard, LeaderboardEntry, build_leaderboard
@@ -19,6 +20,7 @@ __all__ = [
     "BenchmarkTask",
     "CalibrationBin",
     "CalibrationBin",
+    "ComparisonReport",
     "EvaluationReport",
     "Leaderboard",
     "LeaderboardEntry",
@@ -32,6 +34,7 @@ __all__ = [
     "artifact_manifest",
     "benjamini_hochberg",
     "brier_score",
+    "build_comparison_report",
     "canonical_json_hash",
     "bonferroni",
     "build_leaderboard",
