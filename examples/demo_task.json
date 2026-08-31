@@ -1,9 +1,9 @@
 {
-  "benchmark_id": "demo-cardiac-benchmark",
-  "version": "1.0.0",
+  "benchmark_id": "cardiac-challenge-demo",
+  "version": "0.1.0",
   "task_id": "binary-challenge-detection",
   "task_type": "binary_classification",
-  "allowed_metrics": ["accuracy", "balanced_accuracy", "macro_f1", "auroc", "auprc", "brier", "ece"],
+  "allowed_metrics": ["accuracy", "balanced_accuracy", "macro_f1", "auroc", "auprc", "brier", "ece", "sensitivity", "specificity"],
   "primary_metric": "auroc",
   "primary_direction": "higher_is_better",
   "splits": ["validation", "test"],
