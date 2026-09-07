@@ -2,40 +2,18 @@
 
 CardiEval is an independent evaluation library for cardiac machine-learning models. It evaluates submitted predictions against versioned benchmark packages without requiring access to model internals.
 
-## Scope
+## What it contains
 
-CardiEval provides:
-
-- benchmark and task contract validation;
-- exact sample-set validation;
-- classification, diagnostic, calibration, regression, and ranking metrics;
-- bootstrap confidence intervals and paired model comparisons;
-- permutation/Wilcoxon testing and multiple-testing correction;
-- subgroup and robustness analysis;
-- deterministic leaderboard snapshots and historical comparisons;
-- release artifact verification and SHA-256 integrity records;
-- end-to-end evaluation run manifests;
-- CardiBench and CardiBridge integration contracts.
-
-A CardiEval result is an evaluation result, not evidence of clinical safety, effectiveness, or regulatory approval.
-
-## Evaluation workflow
-
-```text
-CardiBench package
-      ↓
-package verification
-      ↓
-submission validation
-      ↓
-metric/statistical evaluation
-      ↓
-EvaluationReport
-      ↓
-SubmissionBundle / run manifest
-      ↓
-publication snapshot
-```
+- Benchmark and task contract validation.
+- Exact sample-set validation.
+- Classification, diagnostic, calibration, regression, and ranking metrics.
+- Bootstrap confidence intervals and paired model comparisons.
+- Permutation/Wilcoxon testing and multiple-testing correction.
+- Subgroup and robustness analysis.
+- Deterministic leaderboard snapshots and historical comparisons.
+- Release-artifact verification and SHA-256 integrity records.
+- End-to-end evaluation run manifests.
+- Versioned machine-readable evaluation contracts.
 
 ## Installation
 
@@ -44,7 +22,7 @@ pip install -e '.[test]'
 pytest
 ```
 
-## CLI
+## Usage
 
 ```bash
 cardieval --manifest examples/benchmark_manifest.json \
@@ -52,9 +30,6 @@ cardieval --manifest examples/benchmark_manifest.json \
   --model-id demo-model \
   --task-file examples/demo_task.json \
   --output cardiEval-report.json
-
-cardieval verify-benchmark --package benchmark-package.json --root ./benchmark-release
-cardieval bridge-validate --package benchmark-package.json --envelope submission-envelope.json --source-role agent
 ```
 
 For a protected end-to-end run:
@@ -70,37 +45,24 @@ cardieval run --package benchmark-package.json \
   --run-output outputs/run.json
 ```
 
-## Contracts
+## Inputs and outputs
 
-`BenchmarkPackage`, `BenchmarkTask`, `PredictionRecord`, `SubmissionBundle`, `EvaluationRunManifest`, `LeaderboardSnapshot`, and `BridgeEnvelope` are versioned machine-readable contracts. Evaluation rejects incompatible benchmark/task identities, duplicate or unknown samples, and invalid split assignments.
+**Inputs:** a versioned benchmark package, task definition, prediction submission, model identifier, and optional evaluation configuration.
 
-## Statistical policy
+**Outputs:** validated evaluation reports, metric/statistical results, confidence intervals, subgroup/robustness summaries, submission bundles, run manifests, leaderboard snapshots, and integrity records.
 
-CardiEval separates descriptive score differences from superiority claims. Decision rules use declared metric direction, confidence intervals, margins, alpha values, and optional multiplicity correction. See `docs/DECISION_POLICY.md`.
+Evaluation rejects incompatible benchmark/task identities, duplicate or unknown samples, and invalid split assignments.
 
-## Reproducibility
+## Validation
 
-The evaluation chain is:
+Software tests cover contract validation, evaluation behavior, statistical functions, artifact integrity, and reproducibility. Evaluation also verifies benchmark identity, sample membership, and split compatibility before scoring.
 
-`BenchmarkPackage → BenchmarkTask → Submission → EvaluationReport → SubmissionBundle → EvaluationRunManifest → LeaderboardSnapshot`
-
-Artifacts carry stable identities and/or hashes. Cryptographic signing and external key management are outside the evaluator.
-
-## Integration
-
-- **CardiBench:** supplies benchmark packages.
-- **CardiBridge:** transports validated Agent/Vex/model submissions.
-- **CardiTrace:** can record evaluation provenance.
-- **HeartTwin:** uses CardiEval as the independent evaluation boundary.
+A successful software test or evaluation run is not evidence of clinical validity, safety, effectiveness, or regulatory acceptance.
 
 ## Limitations
 
-Passing an evaluation gate does not establish clinical validity. Small subgroups, dataset shift, benchmark construction errors, and unmeasured confounding can still limit interpretation.
+Results depend on benchmark construction, data quality, subgroup size, split policy, and the chosen metrics. Statistical significance does not establish clinical significance or causal validity. External key management and cryptographic signing are outside the evaluator.
 
 ## License
 
 GNU Affero General Public License v3.0 or later (AGPL-3.0-or-later). See `LICENSE`.
-
-## Citation
-
-Cite the CardiEval release and the exact benchmark package and evaluation protocol used.
