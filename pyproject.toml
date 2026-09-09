@@ -22,6 +22,11 @@ test = [
   "pytest>=8.0",
   "ruff>=0.6",
 ]
+# Backward-compatible alias retained because the existing CI workflow installs .[dev].
+dev = [
+  "pytest>=8.0",
+  "ruff>=0.6",
+]
 
 [project.scripts]
 cardieval = "cardieval.cli:main"
