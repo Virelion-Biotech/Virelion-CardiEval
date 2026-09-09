@@ -8,6 +8,7 @@ def report(model_id: str, score: float) -> EvaluationReport:
         evaluator_version="0.2.0",
         benchmark_id="bench",
         benchmark_version="1.0",
+        benchmark_sha256="0" * 64,
         task="classification",
         split="test",
         model_id=model_id,
