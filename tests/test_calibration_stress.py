@@ -11,10 +11,10 @@ def test_calibration_curve_has_expected_bins():
 
 
 def test_stress_degradation_respects_metric_direction():
-    result = compare_stress(0.9, 0.75, metric="auroc", direction="higher_is_better")
+    result = compare_stress("auroc", 0.9, 0.75, direction="higher_is_better")
     assert result.degradation == 0.15
     assert result.delta < 0
 
-    result_low = compare_stress(0.1, 0.25, metric="brier", direction="lower_is_better")
+    result_low = compare_stress("brier", 0.1, 0.25, direction="lower_is_better")
     assert result_low.degradation == 0.15
     assert result_low.delta > 0
