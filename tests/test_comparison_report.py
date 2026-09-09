@@ -4,15 +4,20 @@ from cardieval.metrics import accuracy
 
 def test_comparison_report_is_fingerprintable():
     report = build_comparison_report(
+        [0, 1, 0, 1],
+        [0, 1, 0, 0],
+        [0, 1, 1, 1],
+        accuracy,
+        metric_name="accuracy",
+        direction="higher_is_better",
+        benchmark_id="bench",
+        benchmark_version="1",
+        dataset_sha256="0" * 64,
+        evaluator_version="1.4.0",
         model_a="a",
         model_b="b",
-        metric="accuracy",
-        value_a=0.8,
-        value_b=0.7,
-        difference=0.1,
-        ci_low=0.0,
-        ci_high=0.2,
-        direction="higher_is_better",
+        n_resamples=100,
+        seed=42,
     )
     assert report.fingerprint
     assert report.model_a == "a"
