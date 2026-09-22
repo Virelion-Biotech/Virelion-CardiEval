@@ -115,6 +115,11 @@ def _apply_authoritative_reference(
 ) -> tuple[list[PredictionRecord], str]:
     """Replace model-supplied reference fields with evaluator-controlled values when present."""
     if manifest.authoritative_labels is None:
+        if any(record.y_true is None for record in records):
+            raise ValueError(
+                "submission contains missing y_true values and the benchmark provides no "
+                "authoritative labels"
+            )
         return list(records), "submission"
     updated: list[PredictionRecord] = []
     for record in records:
@@ -175,9 +180,10 @@ def _classification_metrics(
             )
         )
 
+    binary_labels = set(np.unique(yt).tolist()) == {0, 1}
     scores = [r.score for r in records]
-    if any(name in requested for name in SCORE_METRICS):
-        if all(score is not None for score in scores) and len(np.unique(yt)) == 2:
+    if binary_labels and any(name in requested for name in SCORE_METRICS):
+        if all(score is not None for score in scores):
             score_array = np.asarray(scores, dtype=float)
             for name, fn in SCORE_METRICS.items():
                 if name not in requested:
@@ -195,11 +201,12 @@ def _classification_metrics(
                     )
                 )
 
-    for name, fn in DIAGNOSTIC_METRICS.items():
-        if name not in requested:
-            continue
-        value = float(fn(yt, yp))
-        if np.isfinite(value):
+    if binary_labels:
+        for name, fn in DIAGNOSTIC_METRICS.items():
+            if name not in requested:
+                continue
+            value = float(fn(yt, yp))
+            if math.isfinite(value):
             results.append(
                 _metric_result(
                     name,
