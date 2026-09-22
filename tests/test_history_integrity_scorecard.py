@@ -1,3 +1,5 @@
+import pytest
+
 from cardieval.integrity import ArtifactRecord, build_release_manifest, fingerprint_file, verify_release_manifest
 from cardieval.leaderboard import Leaderboard, LeaderboardEntry
 from cardieval.publication import LeaderboardSnapshot
@@ -57,7 +59,7 @@ def test_release_manifest_is_deterministic():
 def test_release_verification_detects_tampering(tmp_path):
     path = tmp_path / "report.json"
     path.write_text("stable", encoding="utf-8")
-    record = fingerprint_file(path, kind="report")
+    record = fingerprint_file(path, kind="report").model_copy(update={"path": "report.json"})
     manifest = build_release_manifest(
         version="1.0.0", benchmark_id="bench", benchmark_version="1", task_id="task", publication_id="pub", artifacts=[record]
     )
@@ -65,6 +67,17 @@ def test_release_verification_detects_tampering(tmp_path):
     path.write_text("tampered", encoding="utf-8")
     errors = verify_release_manifest(manifest, tmp_path)
     assert any("sha256 mismatch" in error for error in errors)
+
+
+def test_release_verification_detects_manifest_tampering():
+    artifact = ArtifactRecord(path="report.json", sha256="0" * 64, kind="report", size_bytes=10)
+    manifest = build_release_manifest(
+        version="1.0.0", benchmark_id="bench", benchmark_version="1", task_id="task", publication_id="pub", artifacts=[artifact]
+    )
+    tampered = manifest.model_copy(update={"publication_id": "tampered"})
+    errors = tampered.verify_self()
+    assert "release manifest self-hash mismatch" in errors
+    assert "release_id does not match manifest contents" in errors
 
 
 def test_scorecard_ranks_models_across_snapshots():
