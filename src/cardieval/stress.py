@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import math
 from collections.abc import Sequence
 from dataclasses import dataclass
 
@@ -32,6 +33,8 @@ def compare_stress(
     """
     if direction not in {"higher_is_better", "lower_is_better"}:
         raise ValueError("direction must be higher_is_better or lower_is_better")
+    if not math.isfinite(reference) or not math.isfinite(stressed):
+        raise ValueError("stress scores must be finite")
     if reference == 0:
         relative = None
     else:
