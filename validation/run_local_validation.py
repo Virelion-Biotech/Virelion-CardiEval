@@ -20,9 +20,9 @@ def _ensure_package() -> None:
 def run(data_dir: Path, out_dir: Path, run_pytest: bool) -> int:
     _ensure_package()
 
-    from cardieval.bundle import build_bundle, save_bundle
+    from cardieval.benchmark_package import load_package
     from cardieval.evaluator import load_submission
-    from cardieval.models import BenchmarkManifest, EvaluationReport
+    from cardieval.models import EvaluationReport
     from cardieval.pipeline import run_evaluation
     from cardieval.publication import load_bundle, publish_leaderboard, save_snapshot
 
@@ -32,16 +32,14 @@ def run(data_dir: Path, out_dir: Path, run_pytest: bool) -> int:
     bundles_dir = out_dir / "bundles"
     bundles_dir.mkdir(exist_ok=True)
 
-    manifest_path = data_dir / "manifest.json"
-    task_path = data_dir / "task.json"
     package_path = data_dir / "package.json"
-    if not manifest_path.exists() or not task_path.exists() or not package_path.exists():
-        print("Missing benchmark package inputs; run generate_synthetic_benchmark.py")
+    if not package_path.exists():
+        print("Missing package.json; run generate_synthetic_benchmark.py")
         return 1
 
-    manifest = BenchmarkManifest.model_validate_json(manifest_path.read_text(encoding="utf-8"))
-    package = json.loads(package_path.read_text(encoding="utf-8"))
-    task_id = package["tasks"][0]["task_id"]
+    package = load_package(package_path)
+    task = next(item for item in package.tasks if item.task_id == package.tasks[0].task_id)
+    task_id = task.task_id
 
     submissions = {
         "baseline": data_dir / "submissions" / "baseline.jsonl",
