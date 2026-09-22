@@ -5,13 +5,13 @@ from cardieval.publication_history import compare_snapshots, snapshot_hash
 from cardieval.scorecard import build_scorecard
 
 
-def snapshot(scores):
+def snapshot(scores, benchmark_id="bench"):
     entries = [
         LeaderboardEntry(rank=i + 1, model_id=model, score=score, n_reports=1)
         for i, (model, score) in enumerate(sorted(scores.items(), key=lambda x: -x[1]))
     ]
     return LeaderboardSnapshot(
-        benchmark_id="bench",
+        benchmark_id=benchmark_id,
         benchmark_version="1",
         task_id="task",
         split="test",
@@ -80,7 +80,7 @@ def test_release_verification_detects_manifest_tampering():
 
 def test_scorecard_ranks_models_across_snapshots():
     first = snapshot({"a": 0.9, "b": 0.8})
-    second = snapshot({"a": 0.7, "b": 0.6})
+    second = snapshot({"a": 0.7, "b": 0.6}, benchmark_id="bench-2")
     scorecard = build_scorecard([first, second])
     assert scorecard.models[0].model_id == "a"
     assert scorecard.models[0].n_benchmarks == 2
