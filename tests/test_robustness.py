@@ -1,6 +1,9 @@
+import pytest
+
 from cardieval.evaluator import evaluate_submission
 from cardieval.models import BenchmarkManifest, PredictionRecord
-from cardieval.robustness import relative_drop, subgroup_robustness\nimport pytest
+from cardieval.robustness import relative_drop, subgroup_robustness
+import pytest
 
 
 def test_subgroups_are_reported_and_low_n_is_flagged() -> None:
