@@ -19,7 +19,7 @@ def snapshot(scores):
         primary_direction="higher_is_better",
         n_bundles=len(entries),
         n_models=len(entries),
-        bundles=[f"b-{x.model_id}" for x in entries],
+        bundles=["a" * 64 if x.model_id == "a" else "b" * 64 for x in entries],
         leaderboard=Leaderboard(
             benchmark_id="bench",
             benchmark_version="1",
