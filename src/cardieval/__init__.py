@@ -29,6 +29,7 @@ from .scorecard import BenchmarkScore, ModelScorecard, Scorecard, build_scorecar
 from .stress import StressResult, aggregate_stress, compare_stress
 
 __all__ = [
+    "__version__",
     "ArtifactRecord", "BenchmarkArtifact", "BenchmarkManifest", "BenchmarkPackage", "BenchmarkScore",
     "BenchmarkTask", "BridgeCapabilities", "BridgeEnvelope", "CalibrationBin", "ComparisonDecision",
     "ComparisonReport", "EvaluationReport", "EvaluationRunManifest", "Leaderboard", "LeaderboardDelta",
@@ -36,7 +37,7 @@ __all__ = [
     "PredictionRecord", "PredictionSubmission", "PublicationComparison", "QualityGate", "ReleaseGateReport",
     "ReleaseManifest", "Scorecard", "StressResult", "SubgroupResult", "SubmissionBundle", "TaskRegistry",
     "accuracy", "aggregate_stress", "artifact_manifest", "auprc", "auroc", "balanced_accuracy",
-    "benjamini_hochberg", "brier_score", "bonferroni", "build_bundle", "build_comparison_report",
+    "expected_calibration_error", "benjamini_hochberg", "brier_score", "bonferroni", "build_bundle", "build_comparison_report",
     "build_leaderboard", "build_release_manifest", "build_run_manifest", "build_scorecard",
     "build_submission_envelope", "calibration_curve", "canonical_json_hash", "cohen_kappa", "compare_predictions",
     "compare_snapshots", "compare_stress", "confusion_matrix_counts", "decide_comparison", "evaluate_release_gates",
