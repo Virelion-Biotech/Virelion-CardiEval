@@ -1,7 +1,7 @@
 import pytest
 
 from cardieval.calibration_curves import calibration_curve
-from cardieval.stress import aggregate_stress, compare_stress
+from cardieval.stress import compare_stress
 
 
 def test_calibration_curve_has_expected_bins():
