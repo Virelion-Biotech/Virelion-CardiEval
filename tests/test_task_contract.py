@@ -71,6 +71,6 @@ def test_task_contract_rejects_missing_primary_metric():
     try:
         evaluate_submission(manifest, records, model_id="m", task_contract=bad)
     except ValueError as exc:
-        assert "primary_metric" in str(exc)
+        assert "Primary metric" in str(exc)
     else:
         raise AssertionError("expected invalid contract to fail")
