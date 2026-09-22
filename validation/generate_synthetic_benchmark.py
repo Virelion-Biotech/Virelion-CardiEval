@@ -104,6 +104,20 @@ def generate(n: int = 500, seed: int = 42, out_dir: Path = Path("validation/data
         json.dumps(task, indent=2) + "\n", encoding="utf-8"
     )
 
+    package = {
+        "schema_version": "1.1",
+        "benchmark_id": "cardiac-synthetic-validation",
+        "version": "1.0.0",
+        "manifest": manifest,
+        "tasks": [task],
+        "metadata": {
+            "purpose": "strict synthetic CardiEval package integration test"
+        },
+    }
+    (out_dir / "package.json").write_text(
+        json.dumps(package, indent=2) + "\n", encoding="utf-8"
+    )
+
     def rough_auroc(yt: np.ndarray, scores: np.ndarray) -> float:
         pos = scores[yt == 1]
         neg = scores[yt == 0]
