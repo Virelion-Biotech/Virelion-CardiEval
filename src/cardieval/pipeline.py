@@ -7,7 +7,6 @@ from pathlib import Path
 from .benchmark_package import load_package, validate_submission_against_package, verify_package_artifacts
 from .bundle import build_bundle, save_bundle
 from .evaluator import evaluate_submission, load_submission, save_report, sha256_file
-from .provenance import canonical_json_hash
 from .run_manifest import EvaluationRunManifest, build_run_manifest, save_run_manifest
 
 
