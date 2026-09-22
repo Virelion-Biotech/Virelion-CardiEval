@@ -18,13 +18,6 @@ class ArtifactRecord(BaseModel):
     kind: str = Field(min_length=1)
     size_bytes: int = Field(ge=0)
 
-    @model_validator(mode="after")
-    def validate_path(self) -> "ArtifactRecord":
-        raw = Path(self.path)
-        if raw.is_absolute() or any(part in {"", ".", ".."} for part in raw.parts):
-            raise ValueError("release artifact path must be a clean relative path")
-        return self
-
 
 class ReleaseManifest(BaseModel):
     model_config = ConfigDict(extra="forbid", allow_inf_nan=False)
@@ -93,6 +86,8 @@ def build_release_manifest(
         raise ValueError("At least one release artifact is required")
     if len({item.path for item in records}) != len(records):
         raise ValueError("Duplicate artifact paths are not permitted")
+    for item in records:
+        safe_artifact_path(".", item.path)
     payload = {
         "version": version,
         "benchmark_id": benchmark_id,
