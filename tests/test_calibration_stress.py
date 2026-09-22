@@ -1,7 +1,7 @@
 import pytest
 
 from cardieval.calibration_curves import calibration_curve
-from cardieval.stress import compare_stress
+from cardieval.stress import aggregate_stress, compare_stress
 
 
 def test_calibration_curve_has_expected_bins():
@@ -20,3 +20,21 @@ def test_stress_degradation_respects_metric_direction():
     result_low = compare_stress("brier", 0.1, 0.25, direction="lower_is_better")
     assert result_low.degradation == pytest.approx(0.15)
     assert result_low.delta > 0
+
+
+def test_stress_aggregation_requires_one_metric_contract():
+    first = compare_stress("auroc", 0.9, 0.8, direction="higher_is_better")
+    second = compare_stress("auroc", 0.9, 0.7, direction="higher_is_better")
+    assert aggregate_stress([first, second]) == pytest.approx(0.15)
+
+
+def test_stress_aggregation_rejects_mixed_metrics():
+    first = compare_stress("auroc", 0.9, 0.8, direction="higher_is_better")
+    second = compare_stress("brier", 0.1, 0.2, direction="lower_is_better")
+    with pytest.raises(ValueError, match="same metric"):
+        aggregate_stress([first, second])
+
+
+def test_stress_rejects_non_finite_scores():
+    with pytest.raises(ValueError, match="finite"):
+        compare_stress("auroc", float("nan"), 0.8, direction="higher_is_better")
