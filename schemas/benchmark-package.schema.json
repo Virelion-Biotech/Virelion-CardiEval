@@ -19,8 +19,8 @@
         "dataset_sha256":{"type":"string","pattern":"^[0-9a-f]{64}$"},
         "label_schema":{"type":"object","additionalProperties":{"type":"string"}},
         "metadata":{"type":"object","additionalProperties":{"type":"string"}},
-        "authoritative_labels":{"type":"object"},
-        "authoritative_subgroups":{"type":"object","additionalProperties":{"type":"string"}}
+        "authoritative_labels":{"type":["object","null"]},
+        "authoritative_subgroups":{"type":["object","null"],"additionalProperties":{"type":"string"}}
       }
     },
     "tasks":{
@@ -48,7 +48,7 @@
         "type":"object","additionalProperties":false,
         "required":["path","sha256","kind","size_bytes"],
         "properties":{
-          "path":{"type":"string","pattern":"^(?!/)(?!.*(^|/)\\.\\.(/|$)).+"},
+          "path":{"type":"string","pattern":"^(?!/)(?!.*(^|/)\\\\.\\\\.(/|$)).+"},
           "sha256":{"type":"string","pattern":"^[0-9a-f]{64}$"},
           "kind":{"type":"string","minLength":1},
           "size_bytes":{"type":"integer","minimum":0}
