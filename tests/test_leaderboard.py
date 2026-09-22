@@ -1,3 +1,5 @@
+import pytest
+
 from cardieval.leaderboard import build_leaderboard
 from cardieval.multiple_testing import benjamini_hochberg, bonferroni
 from cardieval.models import EvaluationReport, MetricResult
