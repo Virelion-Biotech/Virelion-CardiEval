@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Iterable
+import re
 from pathlib import Path
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
@@ -35,6 +36,8 @@ class LeaderboardSnapshot(BaseModel):
             raise ValueError("primary_direction must be higher_is_better or lower_is_better")
         if self.n_bundles != len(self.bundles) or len(set(self.bundles)) != len(self.bundles):
             raise ValueError("snapshot bundle count must match unique bundle IDs")
+        if any(not re.fullmatch(r"[0-9a-f]{64}", bundle_id) for bundle_id in self.bundles):
+            raise ValueError("snapshot bundle IDs must be 64-character lowercase SHA-256 values")
         entries = self.leaderboard.entries
         if self.n_models != len(entries):
             raise ValueError("snapshot model count must match leaderboard entries")
