@@ -48,5 +48,5 @@ def test_compare_snapshots_reports_rank_and_score_change():
 def test_compare_snapshots_rejects_incompatible_contract():
     previous = snapshot(0.9, 0.8)
     current = snapshot(0.9, 0.8).model_copy(update={"primary_metric": "accuracy"})
-    with pytest.raises(ValueError, match="primary_metric"):
+    with pytest.raises(ValueError, match="snapshot and leaderboard identities"):
         compare_snapshots(previous, current)
