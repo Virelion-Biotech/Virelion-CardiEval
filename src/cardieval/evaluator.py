@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import hashlib
+import math
 from pathlib import Path
 from typing import Callable, Sequence
 
@@ -341,11 +342,9 @@ def evaluate_submission(
         metric_by_name = {metric.name: metric for metric in metrics}
         primary = metric_by_name.get(primary_metric)
         if primary is None:
-            if primary_metric in SCORE_METRICS:
-                raise ValueError(
-                    f"Primary metric {primary_metric!r} requires a complete probability score vector"
-                )
             raise ValueError(f"Primary metric {primary_metric!r} was not produced by evaluator")
+        if primary.direction != primary_direction:
+            raise ValueError(f"Primary metric {primary_metric!r} direction does not match task contract")
         primary_value = primary.value
     if ground_truth_source == "submission":
         warnings.append(
@@ -359,7 +358,7 @@ def evaluate_submission(
         for item in subgroups
         if item.warning
     )
-    return EvaluationReport(
+    report = EvaluationReport(
         evaluator_version=__version__,
         benchmark_id=manifest.benchmark_id,
         benchmark_version=manifest.version,
@@ -376,6 +375,9 @@ def evaluate_submission(
         subgroups=subgroups,
         warnings=warnings,
     )
+    if task_contract is not None:
+        task_contract.validate_report_contract(report)
+    return report
 
 
 def sha256_file(path: str | Path) -> str:
