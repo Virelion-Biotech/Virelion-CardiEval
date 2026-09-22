@@ -26,7 +26,7 @@ def snapshot(a_score: float, b_score: float) -> LeaderboardSnapshot:
         primary_direction="higher_is_better",
         n_bundles=2,
         n_models=2,
-        bundles=["bundle-a", "bundle-b"],
+        bundles=["a" * 64, "b" * 64],
         leaderboard=leaderboard,
     )
 
