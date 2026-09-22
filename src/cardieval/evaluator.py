@@ -207,8 +207,8 @@ def _classification_metrics(
                 continue
             value = float(fn(yt, yp))
             if math.isfinite(value):
-            results.append(
-                _metric_result(
+                results.append(
+                    _metric_result(
                     name,
                     value,
                     len(records),
