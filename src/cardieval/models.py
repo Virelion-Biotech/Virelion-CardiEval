@@ -14,15 +14,15 @@ SplitName = Literal["train", "validation", "test", "external"]
 class PredictionRecord(BaseModel):
     """One model prediction tied to a stable benchmark sample ID.
 
-    y_true is retained for backward compatibility with the original public
-    JSONL format. Independent benchmarks should provide authoritative labels in
-    BenchmarkManifest and enforce them through BenchmarkTask.
+    y_true is optional so protected benchmark submissions can omit reference
+    labels entirely. When a task does not supply evaluator-controlled labels,
+    evaluation requires y_true to be present.
     """
 
     model_config = ConfigDict(extra="forbid", allow_inf_nan=False)
 
     sample_id: str = Field(min_length=1)
-    y_true: float | int | str
+    y_true: float | int | str | None = None
     y_pred: float | int | str
     score: float | None = None
     subgroup: str | None = None
