@@ -2,12 +2,14 @@ name: CI
 
 on:
   push:
-    branches:
-      - main
-      - "maturity/**"
+    branches: [main]
   pull_request:
     branches: [main]
   workflow_dispatch:
+
+concurrency:
+  group: cardiEval-ci-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   test:
