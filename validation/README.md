@@ -1,79 +1,63 @@
 # Local validation kit for CardiEval
 
-This folder gives you everything needed to validate CardiEval **on your own machine** without relying on external cardiac datasets or fabricated model predictions.
+This folder provides a reproducible software-level validation of CardiEval without relying on external cardiac datasets or fabricated model predictions.
 
-## What you get
+## What it exercises
 
 | File | Purpose |
 |------|---------|
-| `generate_synthetic_benchmark.py` | Builds a reproducible synthetic binary-classification benchmark (default n=500) with two models + sex subgroups |
-| `run_local_validation.py` | Runs the full evaluate → report → bundle → (optional) leaderboard path |
-| `data/` | Created by the generator (manifest, task, submissions) |
-| `outputs/` | Created by the runner (reports, bundles, summary) |
+| generate_synthetic_benchmark.py | Builds a reproducible synthetic binary-classification benchmark with evaluator-controlled labels/subgroups, two model submissions, and a complete BenchmarkPackage |
+| run_local_validation.py | Runs the package-verified evaluation pipeline, report/bundle/run-manifest generation, integrity checks, and publication path |
+| data/ | Generated manifest, task, package, and protected submissions |
+| outputs/ | Generated reports, bundles, run manifests, leaderboard snapshot, and validation summary |
 
-The synthetic data is **not clinical**. It only exercises contracts, metrics, CIs, subgroups, and publication plumbing.
+The synthetic data is not clinical. It only exercises contracts, metrics, confidence intervals, subgroup handling, integrity checks, and publication plumbing.
 
-## Quick start (from repo root)
+## Quick start
 
-```bash
-# 1. Install the package
-pip install -e ".[dev]"
+From the repository root:
 
-# 2. Generate synthetic benchmark
-python validation/generate_synthetic_benchmark.py
-# optional: python validation/generate_synthetic_benchmark.py --n 800 --seed 7
+    pip install -e ".[dev]"
+    python validation/generate_synthetic_benchmark.py
+    python validation/run_local_validation.py --pytest
 
-# 3. Run evaluation for both models
-python validation/run_local_validation.py
+Or run the one-shot helper:
 
-# 4. (Optional) also run unit tests
-python validation/run_local_validation.py --pytest
-```
+    bash validation/run_all.sh
 
-Expected outcome:
+Expected outputs include:
 
-- `validation/outputs/report_baseline.json` and `report_strong.json`
-- matching bundles under `validation/outputs/bundles/`
-- `validation/outputs/validation_summary.json`
-- strong model AUROC higher than baseline (by construction)
+- validation/data/package.json
+- validation/outputs/report_baseline.json and report_strong.json
+- validation/outputs/bundles/
+- validation/outputs/run_baseline.json and run_strong.json
+- validation/outputs/leaderboard.json
+- validation/outputs/validation_summary.json
 
-## Use your own predictions instead
+The synthetic benchmark is intentionally generated with evaluator-controlled authoritative_labels. The model submissions contain no y_true, so the validation path exercises the protected-label contract.
 
-Replace the generated files with your own, keeping the same layout:
+## Submission contract
 
-```text
-validation/data/
-  manifest.json          # BenchmarkManifest
-  task.json              # BenchmarkTask (IDs/version must match manifest)
-  submissions/
-    your-model.jsonl     # one PredictionRecord per line
-```
+A protected submission is JSONL with one prediction per benchmark sample:
 
-Then:
+    {"sample_id":"sample-0001","y_pred":0,"score":0.12}
 
-```bash
-python validation/run_local_validation.py --data-dir validation/data --out-dir validation/outputs
-```
+The sample_id set must match the benchmark manifest exactly. For a task that requires evaluator-controlled labels, y_true may be omitted from the submission.
 
-Each JSONL line must look like:
+For self-contained/demo evaluation, submissions may include y_true when the task does not require authoritative benchmark labels.
 
-```json
-{"sample_id":"sample-0001","y_true":0,"y_pred":0,"score":0.12,"subgroup":"male"}
-```
-
-- `sample_id` set must match the manifest **exactly**
-- `score` is required for AUROC / AUPRC / Brier / ECE
-- `subgroup` is optional but enables robustness reporting
+score is required for score-based metrics such as AUROC, AUPRC, Brier score, and ECE. subgroup is optional for unprotected workflows; protected benchmarks can keep subgroup assignments in the evaluator-controlled manifest.
 
 ## Requirements
 
-- Python ≥ 3.10
-- `numpy`, `pydantic`, `scipy`, `scikit-learn` (installed via `pip install -e .`)
+- Python >= 3.10
+- NumPy, Pydantic, SciPy, scikit-learn
+- pytest, Ruff, build, pip-audit, and jsonschema for the developer validation suite
 
-No internet access is required after install.
+No internet access is required after dependencies are installed.
 
-## Notes
+## Real-dataset boundary
 
-- Generator uses only NumPy so it can run even before the full package is installed.
-- Runner imports `cardieval` from `src/` automatically when you run from a source checkout.
-- For real public datasets (PTB-XL, PhysioNet Challenges, etc.) you still need a trained model that emits predictions in the JSONL contract above; this kit does not train models.
+PTB-XL, PhysioNet Challenge data, MIMIC-IV-ECG, and similar datasets can be wrapped by CardiBench, but this repository does not fabricate or bundle trained-model predictions for them. Real benchmark validation therefore requires an actual frozen benchmark package and independently generated submissions.
+
+A successful synthetic/software validation run does not establish clinical validity, safety, effectiveness, or regulatory acceptance.
