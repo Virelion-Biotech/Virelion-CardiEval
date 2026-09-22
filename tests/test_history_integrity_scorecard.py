@@ -1,5 +1,3 @@
-import pytest
-
 from cardieval.integrity import ArtifactRecord, build_release_manifest, fingerprint_file, verify_release_manifest
 from cardieval.leaderboard import Leaderboard, LeaderboardEntry
 from cardieval.publication import LeaderboardSnapshot
