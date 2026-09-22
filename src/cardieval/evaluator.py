@@ -209,15 +209,15 @@ def _classification_metrics(
             if math.isfinite(value):
                 results.append(
                     _metric_result(
-                    name,
-                    value,
-                    len(records),
-                    fn,
-                    yt,
-                    yp,
-                    direction=METRIC_DIRECTIONS[name],
+                        name,
+                        value,
+                        len(records),
+                        fn,
+                        yt,
+                        yp,
+                        direction=METRIC_DIRECTIONS[name],
+                    )
                 )
-            )
     return results
 
 
@@ -277,6 +277,7 @@ def _subgroup_results(
     task: str,
     *,
     min_n: int,
+    requested_metrics: set[str] | None = None,
 ) -> list[SubgroupResult]:
     if min_n < 1:
         raise ValueError("subgroup_min_n must be >= 1")
@@ -293,11 +294,11 @@ def _subgroup_results(
         )
         try:
             if task in {"classification", "binary_classification"}:
-                metrics = _classification_metrics(group)
+                metrics = _classification_metrics(group, requested_metrics=requested_metrics)
             elif task == "regression":
-                metrics = _regression_metrics(group)
+                metrics = _regression_metrics(group, requested_metrics=requested_metrics)
             elif task == "ranking":
-                metrics = _ranking_metrics(group)
+                metrics = _ranking_metrics(group, requested_metrics=requested_metrics)
             else:
                 metrics = []
                 warning = f"{warning + '; ' if warning else ''}subgroup metrics not implemented for {task}"
@@ -359,7 +360,12 @@ def evaluate_submission(
             "evaluator-controlled label assessment."
         )
 
-    subgroups = _subgroup_results(ordered, manifest.task, min_n=subgroup_min_n)
+    subgroups = _subgroup_results(
+        ordered,
+        manifest.task,
+        min_n=subgroup_min_n,
+        requested_metrics=requested_metrics,
+    )
     warnings.extend(
         f"Subgroup '{item.subgroup}': {item.warning}"
         for item in subgroups
