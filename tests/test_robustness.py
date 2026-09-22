@@ -54,4 +54,4 @@ def test_subgroup_robustness_summary():
 
 def test_relative_drop_accounts_for_metric_direction():
     assert relative_drop(0.8, 0.6, direction="higher_is_better") == pytest.approx(0.25)
-    assert relative_drop(0.2, 0.3, direction="lower_is_better") == 0.5
+    assert relative_drop(0.2, 0.3, direction="lower_is_better") == pytest.approx(0.5)
