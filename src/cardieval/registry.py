@@ -4,13 +4,50 @@ from __future__ import annotations
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
-from .models import BenchmarkManifest, SplitName, TaskType
+from .metrics import METRIC_DIRECTIONS
+from .models import BenchmarkManifest, EvaluationReport, SplitName, TaskType
+
+
+_SUPPORTED_METRICS = {
+    "classification": {
+        "accuracy",
+        "balanced_accuracy",
+        "macro_f1",
+        "auroc",
+        "auprc",
+        "brier",
+        "ece",
+        "sensitivity",
+        "specificity",
+        "positive_predictive_value",
+        "negative_predictive_value",
+        "matthews_correlation",
+        "cohen_kappa",
+    },
+    "binary_classification": {
+        "accuracy",
+        "balanced_accuracy",
+        "macro_f1",
+        "auroc",
+        "auprc",
+        "brier",
+        "ece",
+        "sensitivity",
+        "specificity",
+        "positive_predictive_value",
+        "negative_predictive_value",
+        "matthews_correlation",
+        "cohen_kappa",
+    },
+    "regression": {"mae", "rmse"},
+    "ranking": {"mrr", "hit_rate@10", "ndcg@10"},
+}
 
 
 class BenchmarkTask(BaseModel):
     """Public definition of a benchmark task and its scoring contract."""
 
-    model_config = ConfigDict(extra="forbid")
+    model_config = ConfigDict(extra="forbid", allow_inf_nan=False)
 
     benchmark_id: str = Field(min_length=1)
     version: str = Field(min_length=1)
@@ -21,6 +58,7 @@ class BenchmarkTask(BaseModel):
     primary_direction: str
     splits: list[SplitName] = Field(min_length=1)
     description: str = ""
+    requires_authoritative_labels: bool = False
 
     @model_validator(mode="after")
     def validate_contract(self) -> "BenchmarkTask":
@@ -32,6 +70,17 @@ class BenchmarkTask(BaseModel):
             raise ValueError("allowed_metrics must not contain duplicates")
         if len(set(self.splits)) != len(self.splits):
             raise ValueError("splits must not contain duplicates")
+        unsupported = sorted(set(self.allowed_metrics) - _SUPPORTED_METRICS[self.task_type])
+        if unsupported:
+            raise ValueError(
+                f"metrics {unsupported} are not supported for task_type {self.task_type!r}"
+            )
+        expected_direction = METRIC_DIRECTIONS.get(self.primary_metric)
+        if expected_direction and expected_direction != self.primary_direction:
+            raise ValueError(
+                f"primary_direction {self.primary_direction!r} does not match "
+                f"metric {self.primary_metric!r} direction {expected_direction!r}"
+            )
         return self
 
     def validate_manifest(self, manifest: BenchmarkManifest) -> None:
@@ -44,6 +93,35 @@ class BenchmarkTask(BaseModel):
             raise ValueError("task_type does not match manifest task")
         if manifest.split not in self.splits:
             raise ValueError(f"split {manifest.split!r} is not permitted by task {self.task_id!r}")
+        if self.requires_authoritative_labels and manifest.authoritative_labels is None:
+            raise ValueError(
+                "task requires authoritative benchmark labels, but the manifest provides none"
+            )
+
+    def validate_report_contract(self, report: EvaluationReport) -> None:
+        """Validate a completed evaluation report against this task contract."""
+        if report.benchmark_id != self.benchmark_id:
+            raise ValueError("report benchmark_id does not match task")
+        if report.benchmark_version != self.version:
+            raise ValueError("report benchmark_version does not match task")
+        if report.task != self.task_type:
+            raise ValueError("report task_type does not match task")
+        if report.split not in self.splits:
+            raise ValueError(f"report split {report.split!r} is not permitted by task")
+        if report.task_id != self.task_id:
+            raise ValueError("report task_id does not match task")
+        if report.primary_metric != self.primary_metric:
+            raise ValueError("report primary_metric does not match task")
+        if report.primary_direction != self.primary_direction:
+            raise ValueError("report primary_direction does not match task")
+        names = {metric.name for metric in report.metrics}
+        disallowed = sorted(names - set(self.allowed_metrics))
+        if disallowed:
+            raise ValueError(f"report contains metrics not allowed by task: {disallowed}")
+        if self.primary_metric not in names or report.primary_value is None:
+            raise ValueError("report is missing the declared primary metric")
+        if not report.ok:
+            raise ValueError("report contains evaluation errors")
 
 
 class TaskRegistry:
