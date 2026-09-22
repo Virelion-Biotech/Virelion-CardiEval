@@ -21,10 +21,10 @@ def run(data_dir: Path, out_dir: Path, run_pytest: bool) -> int:
     _ensure_package()
 
     from cardieval.bundle import build_bundle, save_bundle
-    from cardieval.evaluator import evaluate_submission, load_submission, save_report, sha256_file
-    from cardieval.models import BenchmarkManifest
+    from cardieval.evaluator import load_submission
+    from cardieval.models import BenchmarkManifest, EvaluationReport
+    from cardieval.pipeline import run_evaluation
     from cardieval.publication import load_bundle, publish_leaderboard, save_snapshot
-    from cardieval.registry import BenchmarkTask
 
     data_dir = Path(data_dir)
     out_dir = Path(out_dir)
@@ -34,12 +34,14 @@ def run(data_dir: Path, out_dir: Path, run_pytest: bool) -> int:
 
     manifest_path = data_dir / "manifest.json"
     task_path = data_dir / "task.json"
-    if not manifest_path.exists() or not task_path.exists():
-        print("Missing manifest.json or task.json; run generate_synthetic_benchmark.py")
+    package_path = data_dir / "package.json"
+    if not manifest_path.exists() or not task_path.exists() or not package_path.exists():
+        print("Missing benchmark package inputs; run generate_synthetic_benchmark.py")
         return 1
 
     manifest = BenchmarkManifest.model_validate_json(manifest_path.read_text(encoding="utf-8"))
-    task = BenchmarkTask.model_validate_json(task_path.read_text(encoding="utf-8"))
+    package = json.loads(package_path.read_text(encoding="utf-8"))
+    task_id = package["tasks"][0]["task_id"]
 
     submissions = {
         "baseline": data_dir / "submissions" / "baseline.jsonl",
@@ -52,24 +54,31 @@ def run(data_dir: Path, out_dir: Path, run_pytest: bool) -> int:
             return 1
 
         records = load_submission(sub_path)
-        report = evaluate_submission(manifest, records, model_id=model_id, task_contract=task)
-        task.validate_report_contract(report)
+        if any(record.y_true is not None for record in records):
+            print(f"[FAIL] protected submission {model_id} unexpectedly contains y_true")
+            summary["ok"] = False
 
         report_path = out_dir / f"report_{model_id}.json"
-        save_report(report, report_path)
-
-        bundle = build_bundle(
-            manifest,
-            report,
-            task_id=task.task_id,
-            submission_sha256=sha256_file(sub_path),
-        )
-        bundle.verify_integrity()
-
         bundle_path = bundles_dir / f"bundle_{model_id}.json"
-        save_bundle(bundle, bundle_path)
-        loaded = load_bundle(bundle_path)
-        loaded.verify_integrity()
+        run_path = out_dir / f"run_{model_id}.json"
+
+        run_evaluation(
+            package_path=package_path,
+            package_root=data_dir,
+            submission_path=sub_path,
+            model_id=model_id,
+            task_id=task_id,
+            report_path=report_path,
+            bundle_path=bundle_path,
+            run_manifest_path=run_path,
+            require_artifact_verification=True,
+        )
+
+        report = EvaluationReport.model_validate_json(
+            report_path.read_text(encoding="utf-8")
+        )
+        bundle = load_bundle(bundle_path)
+        bundle.verify_integrity()
 
         metrics = {m.name: m.value for m in report.metrics}
         summary["models"][model_id] = {
