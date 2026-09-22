@@ -50,10 +50,10 @@ def package() -> BenchmarkPackage:
 
 def records_with_wrong_labels() -> list[PredictionRecord]:
     return [
-        PredictionRecord(sample_id="a", y_true=1, y_pred=0, score=0.9),
-        PredictionRecord(sample_id="b", y_true=0, y_pred=0, score=0.8),
+        PredictionRecord(sample_id="a", y_true=1, y_pred=0, score=0.1),
+        PredictionRecord(sample_id="b", y_true=0, y_pred=0, score=0.9),
         PredictionRecord(sample_id="c", y_true=1, y_pred=1, score=0.2),
-        PredictionRecord(sample_id="d", y_true=0, y_pred=1, score=0.1),
+        PredictionRecord(sample_id="d", y_true=0, y_pred=1, score=0.8),
     ]
 
 
