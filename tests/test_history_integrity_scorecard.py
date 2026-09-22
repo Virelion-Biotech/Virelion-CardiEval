@@ -21,7 +21,7 @@ def snapshot(scores, benchmark_id="bench"):
         n_models=len(entries),
         bundles=["a" * 64 if x.model_id == "a" else "b" * 64 for x in entries],
         leaderboard=Leaderboard(
-            benchmark_id="bench",
+            benchmark_id=benchmark_id,
             benchmark_version="1",
             split="test",
             metric="auroc",
