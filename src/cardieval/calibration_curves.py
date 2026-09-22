@@ -19,9 +19,6 @@ class CalibrationBin(BaseModel):
     mean_predicted: float
     observed_rate: float
 
-    def model_dump(self, *args, **kwargs):
-        return super().model_dump(*args, **kwargs)
-
 
 def calibration_curve(
     y_true: Sequence[int],
