@@ -90,7 +90,14 @@ def test_unprotected_submission_requires_ground_truth():
     records = [PredictionRecord(sample_id="a", y_pred=0)]
     with pytest.raises(ValueError, match="missing y_true"):
         evaluate_submission(
-            manifest(authoritative=False).model_copy(update={"sample_ids": ["a"]}),
+            BenchmarkManifest(
+                benchmark_id="bench",
+                version="1",
+                task="binary_classification",
+                split="test",
+                sample_ids=["a"],
+                dataset_sha256="0" * 64,
+            ),
             records,
             model_id="m",
             task_contract=task(required=False),
