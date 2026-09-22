@@ -1,7 +1,7 @@
 import pytest
 
 from cardieval.benchmark_package import BenchmarkPackage
-from cardieval.bridge import BridgeEnvelope, PredictionSubmission, build_submission_envelope, validate_envelope
+from cardieval.bridge import PredictionSubmission, build_submission_envelope, validate_envelope
 from cardieval.bundle import build_bundle
 from cardieval.integrity import ArtifactRecord, build_release_manifest, verify_release_manifest
 from cardieval.models import BenchmarkManifest, EvaluationReport, MetricResult, PredictionRecord
@@ -73,6 +73,28 @@ def test_authoritative_labels_override_submission_labels():
 def test_independent_task_requires_authoritative_labels():
     with pytest.raises(ValueError, match="authoritative benchmark labels"):
         task().validate_manifest(manifest(authoritative=False))
+
+def test_protected_submission_can_omit_ground_truth():
+    records = [
+        PredictionRecord(sample_id="a", y_pred=0, score=0.1),
+        PredictionRecord(sample_id="b", y_pred=1, score=0.9),
+        PredictionRecord(sample_id="c", y_pred=0, score=0.2),
+        PredictionRecord(sample_id="d", y_pred=1, score=0.8),
+    ]
+    report = evaluate_submission(manifest(), records, model_id="m", task_contract=task())
+    assert report.ground_truth_source == "benchmark_manifest"
+    assert report.primary_value == 1.0
+
+
+def test_unprotected_submission_requires_ground_truth():
+    records = [PredictionRecord(sample_id="a", y_pred=0)]
+    with pytest.raises(ValueError, match="missing y_true"):
+        evaluate_submission(
+            manifest(authoritative=False).model_copy(update={"sample_ids": ["a"]}),
+            records,
+            model_id="m",
+            task_contract=task(required=False),
+        )
 
 
 def test_submission_bundle_integrity_is_detected():
