@@ -12,6 +12,7 @@ from .provenance import canonical_json_hash
 
 BridgeRole = Literal["agent", "vex", "eval"]
 BridgePayloadType = Literal["challenge_population", "observation", "prediction_submission"]
+BridgeSourceRole = Literal["agent", "vex"]
 
 
 class BridgeCapabilities(BaseModel):
@@ -39,9 +40,9 @@ class BridgeEnvelope(BaseModel):
 
     schema_version: str = "1.0"
     message_id: str = Field(pattern=r"^[0-9a-f]{64}$")
-    source_role: BridgeRole
-    target_role: BridgeRole
-    payload_type: BridgePayloadType
+    source_role: BridgeSourceRole
+    target_role: Literal["eval"]
+    payload_type: Literal["prediction_submission"]
     benchmark_id: str = Field(min_length=1)
     benchmark_version: str = Field(min_length=1)
     task_id: str = Field(min_length=1)
@@ -62,8 +63,11 @@ class PredictionSubmission(BaseModel):
 
 def _expected_message_id(envelope: BridgeEnvelope) -> str:
     return canonical_json_hash({
+        "schema_version": envelope.schema_version,
         "benchmark": f"{envelope.benchmark_id}@{envelope.benchmark_version}",
         "task_id": envelope.task_id,
+        "payload_type": envelope.payload_type,
+        "target_role": envelope.target_role,
         "payload_sha256": envelope.payload_sha256,
         "source_role": envelope.source_role,
     })
@@ -86,8 +90,11 @@ def build_submission_envelope(
     digest = canonical_json_hash(payload)
     return BridgeEnvelope(
         message_id=canonical_json_hash({
+            "schema_version": "1.0",
             "benchmark": f"{package.benchmark_id}@{package.version}",
             "task_id": submission.task_id,
+            "payload_type": "prediction_submission",
+            "target_role": "eval",
             "payload_sha256": digest,
             "source_role": source_role,
         }),
@@ -112,8 +119,6 @@ def validate_envelope(
     package.validate_contracts()
     if expected_source_role is not None and envelope.source_role != expected_source_role:
         raise ValueError("bridge source role mismatch")
-    if envelope.source_role == "eval":
-        raise ValueError("CardiEval does not accept eval-originated submission envelopes")
     if envelope.target_role != "eval":
         raise ValueError("CardiEval accepts only envelopes targeted at eval")
     if envelope.benchmark_id != package.benchmark_id or envelope.benchmark_version != package.version:
