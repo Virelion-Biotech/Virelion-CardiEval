@@ -50,11 +50,14 @@ def run(data_dir: Path, out_dir: Path, run_pytest: bool) -> int:
         if not sub_path.exists():
             print(f"Missing submission: {sub_path}")
             return 1
+
         records = load_submission(sub_path)
         report = evaluate_submission(manifest, records, model_id=model_id, task_contract=task)
         task.validate_report_contract(report)
+
         report_path = out_dir / f"report_{model_id}.json"
         save_report(report, report_path)
+
         bundle = build_bundle(
             manifest,
             report,
@@ -62,6 +65,7 @@ def run(data_dir: Path, out_dir: Path, run_pytest: bool) -> int:
             submission_sha256=sha256_file(sub_path),
         )
         bundle.verify_integrity()
+
         bundle_path = bundles_dir / f"bundle_{model_id}.json"
         save_bundle(bundle, bundle_path)
         loaded = load_bundle(bundle_path)
@@ -104,15 +108,17 @@ def run(data_dir: Path, out_dir: Path, run_pytest: bool) -> int:
         summary["ok"] = False
 
     summary_path = out_dir / "validation_summary.json"
-    summary_path.write_text(json.dumps(summary, indent=2) + "
-", encoding="utf-8")
+    summary_path.write_text(
+        json.dumps(summary, indent=2) + "\n", encoding="utf-8"
+    )
 
     if run_pytest:
         rc = subprocess.call([sys.executable, "-m", "pytest", "-q"])
         summary["pytest_exit_code"] = rc
         summary["ok"] = summary["ok"] and rc == 0
-        summary_path.write_text(json.dumps(summary, indent=2) + "
-", encoding="utf-8")
+        summary_path.write_text(
+            json.dumps(summary, indent=2) + "\n", encoding="utf-8"
+        )
         if rc != 0:
             return rc
 
