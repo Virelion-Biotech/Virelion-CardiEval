@@ -1,11 +1,5 @@
 #!/usr/bin/env python3
-"""
-Generate a reproducible synthetic benchmark for local CardiEval validation.
-
-The manifest contains evaluator-controlled synthetic labels/subgroups so the
-validation run exercises the same independent-evaluation path used by a
-protected benchmark. The data are synthetic and not clinical.
-"""
+"""Generate a reproducible synthetic benchmark for local CardiEval validation."""
 
 from __future__ import annotations
 
@@ -49,21 +43,17 @@ def generate(n: int = 500, seed: int = 42, out_dir: Path = Path("validation/data
             lines.append(json.dumps(
                 {
                     "sample_id": sid,
-                    "y_true": 0,
                     "y_pred": int(yp),
                     "score": float(round(sc, 6)),
                 },
                 separators=(",", ":"),
             ))
-        path.write_text("
-".join(lines) + "
-", encoding="utf-8")
+        path.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
     write_jsonl(out_dir / "submissions" / "baseline.jsonl", score_base, y_pred_base)
     write_jsonl(out_dir / "submissions" / "strong.jsonl", score_strong, y_pred_strong)
 
-    id_blob = "
-".join(sample_ids).encode("utf-8")
+    id_blob = "\n".join(sample_ids).encode("utf-8")
     dataset_sha256 = hashlib.sha256(id_blob).hexdigest()
     manifest = {
         "benchmark_id": "cardiac-synthetic-validation",
@@ -84,8 +74,9 @@ def generate(n: int = 500, seed: int = 42, out_dir: Path = Path("validation/data
         "authoritative_labels": {sid: int(y) for sid, y in zip(sample_ids, y_true)},
         "authoritative_subgroups": {sid: str(sg) for sid, sg in zip(sample_ids, subgroup)},
     }
-    (out_dir / "manifest.json").write_text(json.dumps(manifest, indent=2) + "
-", encoding="utf-8")
+    (out_dir / "manifest.json").write_text(
+        json.dumps(manifest, indent=2) + "\n", encoding="utf-8"
+    )
 
     task = {
         "benchmark_id": "cardiac-synthetic-validation",
@@ -109,8 +100,9 @@ def generate(n: int = 500, seed: int = 42, out_dir: Path = Path("validation/data
         "description": "Synthetic binary cardiac challenge detection task for local validation.",
         "requires_authoritative_labels": True,
     }
-    (out_dir / "task.json").write_text(json.dumps(task, indent=2) + "
-", encoding="utf-8")
+    (out_dir / "task.json").write_text(
+        json.dumps(task, indent=2) + "\n", encoding="utf-8"
+    )
 
     def rough_auroc(yt: np.ndarray, scores: np.ndarray) -> float:
         pos = scores[yt == 1]
@@ -136,8 +128,9 @@ def generate(n: int = 500, seed: int = 42, out_dir: Path = Path("validation/data
         },
         "note": "approx_auroc is a sanity-check estimate; CardiEval uses sklearn-based AUROC.",
     }
-    (out_dir / "meta.json").write_text(json.dumps(meta, indent=2) + "
-", encoding="utf-8")
+    (out_dir / "meta.json").write_text(
+        json.dumps(meta, indent=2) + "\n", encoding="utf-8"
+    )
 
     print(f"Wrote synthetic benchmark to {out_dir.resolve()}")
     print(
@@ -149,7 +142,9 @@ def generate(n: int = 500, seed: int = 42, out_dir: Path = Path("validation/data
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Generate synthetic CardiEval validation benchmark")
+    parser = argparse.ArgumentParser(
+        description="Generate synthetic CardiEval validation benchmark"
+    )
     parser.add_argument("--n", type=int, default=500)
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--out-dir", type=Path, default=Path("validation/data"))
