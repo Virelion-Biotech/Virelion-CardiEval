@@ -96,6 +96,11 @@ class BenchmarkTask(BaseModel):
             raise ValueError(f"report contains metrics not allowed by task: {disallowed}")
         if self.primary_metric not in names or report.primary_value is None:
             raise ValueError("report is missing the declared primary metric")
+        primary = next(metric for metric in report.metrics if metric.name == self.primary_metric)
+        if report.primary_value != primary.value:
+            raise ValueError("report primary_value does not match the primary metric value")
+        if self.requires_authoritative_labels and report.ground_truth_source != "benchmark_manifest":
+            raise ValueError("independent task requires evaluator-controlled ground truth")
         if not report.ok:
             raise ValueError("report contains evaluation errors")
 
