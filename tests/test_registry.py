@@ -8,7 +8,7 @@ def test_registry_requires_primary_metric_contract():
         benchmark_id="cardi-bench",
         version="1.0",
         task_id="challenge-classification",
-        task_type="classification",
+        task_type="binary_classification",
         allowed_metrics=["macro_f1", "auroc"],
         primary_metric="macro_f1",
         primary_direction="higher_is_better",

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import math
 from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -11,7 +12,7 @@ Decision = Literal["superior", "non_inferior", "inconclusive", "inferior"]
 
 
 class ComparisonDecision(BaseModel):
-    model_config = ConfigDict(extra="forbid")
+    model_config = ConfigDict(extra="forbid", allow_inf_nan=False)
 
     metric: str = Field(min_length=1)
     direction: Literal["higher_is_better", "lower_is_better"]
@@ -63,6 +64,12 @@ def decide_comparison(
     or non-inferiority margin and the adjusted p-value must be below alpha when
     supplied.
     """
+    if not math.isfinite(observed_difference):
+        raise ValueError("observed_difference must be finite")
+    if not math.isfinite(ci_low) or not math.isfinite(ci_high):
+        raise ValueError("confidence interval bounds must be finite")
+    if adjusted_pvalue is not None and not math.isfinite(adjusted_pvalue):
+        raise ValueError("adjusted_pvalue must be finite")
     if not 0 < alpha < 1:
         raise ValueError("alpha must be in (0, 1)")
     if margin < 0:
@@ -119,6 +126,8 @@ def evaluate_release_gates(
     allow_warnings: bool = True,
 ) -> ReleaseGateReport:
     """Create a deterministic release-readiness report from evaluation facts."""
+    if verification_errors < 0 or subgroup_warnings < 0:
+        raise ValueError("gate error/warning counts must be non-negative")
     gates = [
         QualityGate(
             name="evaluation_report",

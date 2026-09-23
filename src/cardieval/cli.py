@@ -8,7 +8,7 @@ import sys
 from pathlib import Path
 
 from .benchmark_package import load_package, verify_package_artifacts
-from .bridge import BridgeCapabilities, BridgeEnvelope, validate_envelope
+from .bridge import BridgeEnvelope, validate_envelope
 from .bundle import build_bundle, save_bundle
 from .evaluator import evaluate_submission, load_submission, save_report, sha256_file
 from .integrity import ReleaseManifest, verify_release_manifest

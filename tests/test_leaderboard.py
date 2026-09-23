@@ -1,3 +1,5 @@
+import pytest
+
 from cardieval.leaderboard import build_leaderboard
 from cardieval.multiple_testing import benjamini_hochberg, bonferroni
 from cardieval.models import EvaluationReport, MetricResult
@@ -28,7 +30,7 @@ def test_leaderboard_ranks_and_averages_models():
         direction="higher_is_better",
     )
     assert [entry.model_id for entry in board.entries] == ["a", "b"]
-    assert board.entries[0].score == 0.85
+    assert board.entries[0].score == pytest.approx(0.85)
     assert board.entries[0].n_reports == 2
     assert board.entries[0].rank == 1
 

@@ -13,7 +13,7 @@ from .publication import LeaderboardSnapshot
 class LeaderboardDelta(BaseModel):
     """Change in a model's published rank/score between two snapshots."""
 
-    model_config = ConfigDict(extra="forbid")
+    model_config = ConfigDict(extra="forbid", allow_inf_nan=False)
 
     model_id: str = Field(min_length=1)
     previous_rank: int | None = None
@@ -27,7 +27,7 @@ class LeaderboardDelta(BaseModel):
 class PublicationComparison(BaseModel):
     """Machine-readable comparison between two compatible leaderboard snapshots."""
 
-    model_config = ConfigDict(extra="forbid")
+    model_config = ConfigDict(extra="forbid", allow_inf_nan=False)
 
     schema_version: str = "1.0"
     benchmark_id: str
@@ -42,11 +42,15 @@ class PublicationComparison(BaseModel):
 
     @property
     def changed_models(self) -> int:
-        return sum(delta.rank_change not in (None, 0) or delta.score_change not in (None, 0.0) for delta in self.deltas)
+        return sum(
+            delta.rank_change not in (None, 0) or delta.score_change not in (None, 0.0)
+            for delta in self.deltas
+        )
 
 
 def snapshot_hash(snapshot: LeaderboardSnapshot) -> str:
     """Return a deterministic integrity hash for a publication snapshot."""
+    snapshot.model_validate(snapshot.model_dump(mode="json"))
     return canonical_json_hash(snapshot.model_dump(mode="json"))
 
 
@@ -55,6 +59,8 @@ def compare_snapshots(
     current: LeaderboardSnapshot,
 ) -> PublicationComparison:
     """Compare two snapshots only when their publication contract is compatible."""
+    previous.model_validate(previous.model_dump(mode="json"))
+    current.model_validate(current.model_dump(mode="json"))
     identity = (
         "benchmark_id",
         "benchmark_version",
@@ -82,10 +88,14 @@ def compare_snapshots(
                 model_id=model_id,
                 previous_rank=old_rank,
                 current_rank=new_rank,
-                rank_change=(old_rank - new_rank) if old_rank is not None and new_rank is not None else None,
+                rank_change=(old_rank - new_rank)
+                if old_rank is not None and new_rank is not None
+                else None,
                 previous_score=old_score,
                 current_score=new_score,
-                score_change=(new_score - old_score) if old_score is not None and new_score is not None else None,
+                score_change=(new_score - old_score)
+                if old_score is not None and new_score is not None
+                else None,
             )
         )
 
@@ -104,9 +114,13 @@ def compare_snapshots(
 
 def load_snapshot(path: str | Path) -> LeaderboardSnapshot:
     """Load and validate a serialized leaderboard snapshot."""
-    return LeaderboardSnapshot.model_validate_json(Path(path).read_text(encoding="utf-8"))
+    path = Path(path)
+    if not path.is_file() or path.is_symlink():
+        raise ValueError(f"snapshot must be a regular file: {path}")
+    return LeaderboardSnapshot.model_validate_json(path.read_text(encoding="utf-8"))
 
 
 def save_comparison(comparison: PublicationComparison, path: str | Path) -> None:
-    """Write a publication comparison as JSON."""
-    Path(path).write_text(comparison.model_dump_json(indent=2), encoding="utf-8")
+    path = Path(path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(comparison.model_dump_json(indent=2), encoding="utf-8")

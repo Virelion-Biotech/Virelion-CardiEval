@@ -5,6 +5,7 @@ from __future__ import annotations
 from pydantic import BaseModel, ConfigDict, Field
 
 from .comparison import compare_predictions
+from .metrics import METRIC_DIRECTIONS
 from .provenance import evaluation_fingerprint
 
 
@@ -41,6 +42,14 @@ def build_comparison_report(
     n_resamples: int = 5000,
     seed: int = 0,
 ) -> ComparisonReport:
+    expected_direction = METRIC_DIRECTIONS.get(metric_name)
+    if expected_direction is None:
+        raise ValueError(f"unknown metric direction for {metric_name!r}")
+    if direction != expected_direction:
+        raise ValueError(
+            f"direction {direction!r} does not match metric {metric_name!r} "
+            f"direction {expected_direction!r}"
+        )
     result = compare_predictions(
         y_true,
         pred_a,

@@ -4,16 +4,16 @@ build-backend = "hatchling.build"
 
 [project]
 name = "cardieval"
-version = "1.4.0"
-description = "Independent evaluation framework for cardiac challenge models"
+dynamic = ["version"]
+description = "Independent evaluation framework for cardiac machine-learning models"
 readme = "README.md"
 requires-python = ">=3.10"
 license = {file = "LICENSE"}
 authors = [{name = "Virelion Biotech"}]
 dependencies = [
-  "numpy>=1.26",
+  "numpy>=1.26,<2.3",
   "pydantic>=2.7",
-  "scipy>=1.12",
+  "scipy>=1.12,<1.15",
   "scikit-learn>=1.4",
 ]
 
@@ -22,14 +22,19 @@ test = [
   "pytest>=8.0",
   "ruff>=0.6",
 ]
-# Backward-compatible alias retained because the existing CI workflow installs .[dev].
 dev = [
   "pytest>=8.0",
   "ruff>=0.6",
+  "build>=1.2",
+  "pip-audit>=2.7",
+  "jsonschema>=4.22",
 ]
 
 [project.scripts]
 cardieval = "cardieval.cli:main"
+
+[tool.hatch.version]
+path = "src/cardieval/_version.py"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/cardieval"]
@@ -37,10 +42,12 @@ packages = ["src/cardieval"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-q"
+strict_markers = true
 
 [tool.ruff]
 line-length = 100
 target-version = "py310"
 
 [tool.ruff.lint]
-select = ["E", "F", "I", "UP"]
+select = ["E4", "E7", "E9", "F"]
+ignore = ["E501"]

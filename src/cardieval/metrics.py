@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Sequence
+from collections.abc import Sequence
 
 import numpy as np
 from sklearn.metrics import (
@@ -22,7 +22,23 @@ def _arrays(y_true: Sequence, y_pred: Sequence) -> tuple[np.ndarray, np.ndarray]
     b = np.asarray(y_pred)
     if a.ndim != 1 or b.ndim != 1 or len(a) != len(b) or len(a) == 0:
         raise ValueError("y_true and y_pred must be non-empty 1D arrays of equal length")
+    for name, array in (("y_true", a), ("y_pred", b)):
+        try:
+            numeric = array.astype(float)
+        except (TypeError, ValueError):
+            continue
+        if not np.all(np.isfinite(numeric)):
+            raise ValueError(f"{name} must contain only finite values")
     return a, b
+
+
+def _score_array(score: Sequence[float]) -> np.ndarray:
+    s = np.asarray(score, dtype=float)
+    if s.ndim != 1 or len(s) == 0:
+        raise ValueError("score must be a non-empty 1D array")
+    if not np.all(np.isfinite(s)):
+        raise ValueError("score must contain only finite values")
+    return s
 
 
 def accuracy(y_true: Sequence, y_pred: Sequence) -> float:
@@ -41,21 +57,30 @@ def macro_f1(y_true: Sequence, y_pred: Sequence) -> float:
 
 
 def auroc(y_true: Sequence, score: Sequence[float]) -> float:
-    a, s = _arrays(y_true, score)
+    a, _ = _arrays(y_true, y_true)
+    s = _score_array(score)
+    if len(a) != len(s):
+        raise ValueError("y_true and score must have equal length")
     if len(np.unique(a)) < 2:
         raise ValueError("AUROC requires at least two observed classes")
     return float(roc_auc_score(a, s))
 
 
 def auprc(y_true: Sequence, score: Sequence[float]) -> float:
-    a, s = _arrays(y_true, score)
+    a, _ = _arrays(y_true, y_true)
+    s = _score_array(score)
+    if len(a) != len(s):
+        raise ValueError("y_true and score must have equal length")
     if len(np.unique(a)) < 2:
         raise ValueError("AUPRC requires at least two observed classes")
     return float(average_precision_score(a, s))
 
 
 def brier(y_true: Sequence, score: Sequence[float]) -> float:
-    a, s = _arrays(y_true, score)
+    a, _ = _arrays(y_true, y_true)
+    s = _score_array(score)
+    if len(a) != len(s):
+        raise ValueError("y_true and score must have equal length")
     if not np.all(np.isin(np.unique(a), [0, 1])):
         raise ValueError("Brier score currently supports binary labels 0/1")
     if np.any((s < 0) | (s > 1)):
@@ -89,4 +114,7 @@ METRIC_DIRECTIONS = {
     "ece": "lower_is_better",
     "mae": "lower_is_better",
     "rmse": "lower_is_better",
+    "mrr": "higher_is_better",
+    "hit_rate@10": "higher_is_better",
+    "ndcg@10": "higher_is_better",
 }

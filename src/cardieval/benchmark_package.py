@@ -5,35 +5,48 @@ from __future__ import annotations
 import hashlib
 from pathlib import Path
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from .models import BenchmarkManifest, PredictionRecord
+from .provenance import safe_artifact_path
 from .registry import BenchmarkTask
 
 
 class BenchmarkArtifact(BaseModel):
     """A declared benchmark file with an integrity hash."""
 
-    model_config = ConfigDict(extra="forbid")
+    model_config = ConfigDict(extra="forbid", allow_inf_nan=False)
 
     path: str = Field(min_length=1)
     sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
     kind: str = Field(min_length=1)
     size_bytes: int = Field(ge=0)
 
+    @model_validator(mode="after")
+    def validate_path(self) -> "BenchmarkArtifact":
+        raw = Path(self.path)
+        if raw.is_absolute() or any(part in {"", ".", ".."} for part in raw.parts):
+            raise ValueError("benchmark artifact path must be a clean relative path")
+        return self
+
 
 class BenchmarkPackage(BaseModel):
     """Self-describing benchmark package consumed by CardiEval."""
 
-    model_config = ConfigDict(extra="forbid")
+    model_config = ConfigDict(extra="forbid", allow_inf_nan=False)
 
-    schema_version: str = "1.0"
+    schema_version: str = "1.1"
     benchmark_id: str = Field(min_length=1)
     version: str = Field(min_length=1)
     manifest: BenchmarkManifest
     tasks: list[BenchmarkTask] = Field(min_length=1)
     artifacts: list[BenchmarkArtifact] = Field(default_factory=list)
     metadata: dict[str, str] = Field(default_factory=dict)
+
+    @model_validator(mode="after")
+    def validate_contract(self) -> "BenchmarkPackage":
+        self.validate_contracts()
+        return self
 
     def validate_contracts(self) -> None:
         """Ensure manifest and task definitions describe the same benchmark release."""
@@ -54,21 +67,24 @@ class BenchmarkPackage(BaseModel):
             raise ValueError("benchmark artifact paths must be unique")
 
 
-def fingerprint_directory(root: str | Path, *, kinds: dict[str, str] | None = None) -> list[BenchmarkArtifact]:
+def fingerprint_directory(
+    root: str | Path, *, kinds: dict[str, str] | None = None
+) -> list[BenchmarkArtifact]:
     """Fingerprint regular files under a directory for a reproducible package manifest."""
-    root_path = Path(root)
+    root_path = Path(root).resolve()
+    if not root_path.is_dir() or root_path.is_symlink():
+        raise ValueError(f"benchmark root is not a regular directory: {root}")
     kinds = kinds or {}
-    if not root_path.is_dir():
-        raise ValueError(f"benchmark root is not a directory: {root}")
     records: list[BenchmarkArtifact] = []
     for path in sorted(p for p in root_path.rglob("*") if p.is_file()):
-        data = path.read_bytes()
         rel = path.relative_to(root_path).as_posix()
+        safe = safe_artifact_path(root_path, rel)
+        data = safe.read_bytes()
         records.append(
             BenchmarkArtifact(
                 path=rel,
                 sha256=hashlib.sha256(data).hexdigest(),
-                kind=kinds.get(path.suffix.lstrip("."), "file"),
+                kind=kinds.get(safe.suffix.lstrip("."), "file"),
                 size_bytes=len(data),
             )
         )
@@ -77,7 +93,10 @@ def fingerprint_directory(root: str | Path, *, kinds: dict[str, str] | None = No
 
 def load_package(path: str | Path) -> BenchmarkPackage:
     """Load and validate a serialized benchmark package."""
-    package = BenchmarkPackage.model_validate_json(Path(path).read_text(encoding="utf-8"))
+    package_path = Path(path)
+    if not package_path.is_file() or package_path.is_symlink():
+        raise ValueError(f"benchmark package must be a regular file: {path}")
+    package = BenchmarkPackage.model_validate_json(package_path.read_text(encoding="utf-8"))
     package.validate_contracts()
     return package
 
@@ -87,9 +106,13 @@ def verify_package_artifacts(package: BenchmarkPackage, root: str | Path) -> lis
     root_path = Path(root)
     errors: list[str] = []
     for artifact in package.artifacts:
-        path = root_path / artifact.path
-        if not path.is_file():
-            errors.append(f"missing benchmark artifact: {artifact.path}")
+        try:
+            path = safe_artifact_path(root_path, artifact.path)
+        except ValueError as exc:
+            errors.append(str(exc))
+            continue
+        if not path.is_file() or path.is_symlink():
+            errors.append(f"missing or non-regular benchmark artifact: {artifact.path}")
             continue
         data = path.read_bytes()
         digest = hashlib.sha256(data).hexdigest()
@@ -111,7 +134,8 @@ def validate_submission_against_package(
     matches = [task for task in package.tasks if task.task_id == task_id]
     if len(matches) != 1:
         raise ValueError(f"package must contain exactly one task named {task_id!r}")
-    matches[0].validate_manifest(package.manifest)
+    task = matches[0]
+    task.validate_manifest(package.manifest)
 
     expected = package.manifest.sample_set()
     observed = [record.sample_id for record in records]
@@ -121,4 +145,6 @@ def validate_submission_against_package(
     if observed_set != expected:
         missing = sorted(expected - observed_set)
         extra = sorted(observed_set - expected)
-        raise ValueError(f"submission sample set mismatch; missing={missing[:5]}, extra={extra[:5]}")
+        raise ValueError(
+            f"submission sample set mismatch; missing={missing[:5]}, extra={extra[:5]}"
+        )

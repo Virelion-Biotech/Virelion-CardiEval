@@ -12,5 +12,12 @@ def test_classification_metrics():
 
 
 def test_regression_metrics():
-    assert mae([1, 2, 4], [1, 4, 1]) == pytest.approx(4 / 3)
-    assert rmse([1, 2, 4], [1, 4, 1]) == pytest.approx((8 / 3) ** 0.5)
+    assert mae([1, 2, 4], [1, 4, 1]) == pytest.approx(5 / 3)
+    assert rmse([1, 2, 4], [1, 4, 1]) == pytest.approx((13 / 3) ** 0.5)
+
+
+def test_metrics_reject_non_finite_inputs():
+    with pytest.raises(ValueError, match="finite"):
+        accuracy([0, 1], [0, float("nan")])
+    with pytest.raises(ValueError, match="finite"):
+        mae([0, float("inf")], [0, 1])
