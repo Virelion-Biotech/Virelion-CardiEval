@@ -24,7 +24,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
-      - run: python -m pip install --upgrade pip
+      - run: python -m pip install --upgrade pip "setuptools>=83"
       - run: pip install -e '.[dev]'
       - run: pip install --upgrade --force-reinstall "numpy==${{ matrix.numpy-version }}"
       - run: python -m pip check
