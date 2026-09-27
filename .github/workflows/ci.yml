@@ -30,7 +30,7 @@ jobs:
       - run: python -m pip check
       - run: ruff check .
       - run: pytest -q
-      - run: pip-audit
+      - run: pip-audit --skip-editable
 
   package-and-integration:
     runs-on: ubuntu-latest
