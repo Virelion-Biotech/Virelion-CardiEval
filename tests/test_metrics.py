@@ -21,3 +21,14 @@ def test_metrics_reject_non_finite_inputs():
         accuracy([0, 1], [0, float("nan")])
     with pytest.raises(ValueError, match="finite"):
         mae([0, float("inf")], [0, 1])
+
+
+
+def test_balanced_accuracy_rejects_single_observed_class():
+    with pytest.raises(ValueError, match="at least two observed classes"):
+        balanced_accuracy([0, 0, 0], [0, 0, 0])
+
+
+def test_balanced_accuracy_rejects_prediction_class_absent_from_truth():
+    with pytest.raises(ValueError, match="not observed"):
+        balanced_accuracy([0, 0, 0, 0], [0, 1, 0, 0])
