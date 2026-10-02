@@ -48,6 +48,16 @@ def accuracy(y_true: Sequence, y_pred: Sequence) -> float:
 
 def balanced_accuracy(y_true: Sequence, y_pred: Sequence) -> float:
     a, b = _arrays(y_true, y_pred)
+    observed = np.unique(a)
+    if len(observed) < 2:
+        raise ValueError(
+            "balanced accuracy requires at least two observed classes"
+        )
+    unexpected = set(np.unique(b).tolist()) - set(observed.tolist())
+    if unexpected:
+        raise ValueError(
+            "y_pred contains classes not observed in y_true"
+        )
     return float(balanced_accuracy_score(a, b))
 
 
