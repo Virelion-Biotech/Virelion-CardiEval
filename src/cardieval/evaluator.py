@@ -162,6 +162,7 @@ def _classification_metrics(
     records: Sequence[PredictionRecord],
     *,
     requested_metrics: set[str] | None = None,
+    warning_sink: list[str] | None = None,
 ) -> list[MetricResult]:
     yt = np.asarray([r.y_true for r in records])
     yp = np.asarray([r.y_pred for r in records])
@@ -173,7 +174,14 @@ def _classification_metrics(
     for name, fn in BASE_CLASSIFICATION_METRICS.items():
         if name not in requested:
             continue
-        value = fn(yt, yp)
+        try:
+            value = fn(yt, yp)
+        except ValueError as exc:
+            if warning_sink is not None:
+                warning_sink.append(
+                    f"Metric {name!r} was omitted: {exc}"
+                )
+            continue
         results.append(
             _metric_result(
                 name, value, len(records), fn, yt, yp, direction=METRIC_DIRECTIONS[name]
@@ -188,7 +196,14 @@ def _classification_metrics(
             for name, fn in SCORE_METRICS.items():
                 if name not in requested:
                     continue
-                value = fn(yt, score_array)
+                try:
+                    value = fn(yt, score_array)
+                except ValueError as exc:
+                    if warning_sink is not None:
+                        warning_sink.append(
+                            f"Metric {name!r} was omitted: {exc}"
+                        )
+                    continue
                 results.append(
                     _metric_result(
                         name,
@@ -205,7 +220,14 @@ def _classification_metrics(
         for name, fn in DIAGNOSTIC_METRICS.items():
             if name not in requested:
                 continue
-            value = float(fn(yt, yp))
+            try:
+                value = float(fn(yt, yp))
+            except ValueError as exc:
+                if warning_sink is not None:
+                    warning_sink.append(
+                        f"Metric {name!r} was omitted: {exc}"
+                    )
+                continue
             if math.isfinite(value):
                 results.append(
                     _metric_result(
@@ -217,6 +239,10 @@ def _classification_metrics(
                         yp,
                         direction=METRIC_DIRECTIONS[name],
                     )
+                )
+            elif warning_sink is not None:
+                warning_sink.append(
+                    f"Metric {name!r} was omitted because it is undefined"
                 )
     return results
 
@@ -327,9 +353,14 @@ def evaluate_submission(
     referenced, ground_truth_source = _apply_authoritative_reference(manifest, records)
     ordered = _order_records(manifest, referenced)
     requested_metrics = set(task_contract.allowed_metrics) if task_contract is not None else None
+    warnings: list[str] = []
 
     if manifest.task in {"classification", "binary_classification"}:
-        metrics = _classification_metrics(ordered, requested_metrics=requested_metrics)
+        metrics = _classification_metrics(
+            ordered,
+            requested_metrics=requested_metrics,
+            warning_sink=warnings,
+        )
     elif manifest.task == "regression":
         metrics = _regression_metrics(ordered, requested_metrics=requested_metrics)
     elif manifest.task == "ranking":
@@ -341,7 +372,6 @@ def evaluate_submission(
     primary_metric = None
     primary_value = None
     primary_direction = None
-    warnings: list[str] = []
 
     if task_contract is not None:
         task_id = task_contract.task_id
