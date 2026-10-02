@@ -1,4 +1,7 @@
 import math
+import warnings
+
+import pytest
 
 from cardieval.diagnostics import (
     cohen_kappa,
@@ -9,6 +12,8 @@ from cardieval.diagnostics import (
     sensitivity,
     specificity,
 )
+
+from cardieval.stats import bootstrap_ci
 
 
 def test_binary_diagnostic_metrics():
@@ -30,3 +35,23 @@ def test_binary_diagnostic_metrics():
 
 def test_undefined_predictive_value_returns_nan():
     assert math.isnan(positive_predictive_value([0, 0], [0, 0]))
+
+
+
+def test_cohen_kappa_rejects_single_class_truth():
+    with pytest.raises(ValueError, match="at least two observed truth classes"):
+        cohen_kappa([0, 0, 0], [0, 0, 0])
+
+
+def test_cohen_kappa_bootstrap_rejects_invalid_resamples_without_warnings():
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always")
+        low, high = bootstrap_ci(
+            [0, 1, 0, 1],
+            [0, 1, 1, 0],
+            cohen_kappa,
+            n_resamples=200,
+            seed=42,
+        )
+    assert -1.0 <= low <= high <= 1.0
+    assert caught == []
