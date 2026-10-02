@@ -57,6 +57,10 @@ def cohen_kappa(y_true: Sequence, y_pred: Sequence) -> float:
     a, b = _arrays(y_true, y_pred)
     if not set(np.unique(a).tolist()).issubset({0, 1}) or not set(np.unique(b).tolist()).issubset({0, 1}):
         raise ValueError("Cohen kappa currently supports binary labels 0/1")
+    if len(np.unique(a)) < 2:
+        raise ValueError(
+            "Cohen kappa requires at least two observed truth classes"
+        )
     return float(cohen_kappa_score(a, b))
 
 
