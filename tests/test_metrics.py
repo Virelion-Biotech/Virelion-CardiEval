@@ -34,7 +34,7 @@ def test_balanced_accuracy_rejects_single_observed_class():
 
 def test_balanced_accuracy_rejects_prediction_class_absent_from_truth():
     with pytest.raises(ValueError, match="not observed"):
-        balanced_accuracy([0, 0, 0, 0], [0, 1, 0, 0])
+        balanced_accuracy([0, 1, 0, 1], [0, 2, 0, 1])
 
 
 
