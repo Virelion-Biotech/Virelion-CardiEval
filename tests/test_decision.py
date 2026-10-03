@@ -35,3 +35,16 @@ def test_failed_release_gate_on_integrity_error():
     )
     assert not result.passed
     assert any(g.name == "artifact_integrity" and not g.passed for g in result.gates)
+
+
+def test_decision_rejects_non_finite_inputs():
+    import pytest
+
+    with pytest.raises(ValueError, match="finite"):
+        decide_comparison(
+            metric="auroc",
+            direction="higher_is_better",
+            observed_difference=float("nan"),
+            ci_low=0.0,
+            ci_high=0.1,
+        )

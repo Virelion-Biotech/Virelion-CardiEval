@@ -13,10 +13,10 @@ from .provenance import canonical_json_hash
 class EvaluationRunManifest(BaseModel):
     """Traceable record of one end-to-end evaluation event."""
 
-    model_config = ConfigDict(extra="forbid")
+    model_config = ConfigDict(extra="forbid", allow_inf_nan=False)
 
-    schema_version: str = "1.0"
-    run_id: str = Field(min_length=1)
+    schema_version: str = "1.1"
+    run_id: str = Field(pattern=r"^[0-9a-f]{64}$")
     benchmark_id: str = Field(min_length=1)
     benchmark_version: str = Field(min_length=1)
     task_id: str = Field(min_length=1)
@@ -60,4 +60,6 @@ def build_run_manifest(
 
 
 def save_run_manifest(manifest: EvaluationRunManifest, path: str | Path) -> None:
-    Path(path).write_text(manifest.model_dump_json(indent=2), encoding="utf-8")
+    path = Path(path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(manifest.model_dump_json(indent=2), encoding="utf-8")

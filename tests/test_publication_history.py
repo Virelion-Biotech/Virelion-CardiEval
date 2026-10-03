@@ -1,3 +1,5 @@
+import pytest
+
 from cardieval.publication import LeaderboardSnapshot
 from cardieval.publication_history import compare_snapshots, snapshot_hash
 from cardieval.leaderboard import Leaderboard, LeaderboardEntry
@@ -24,7 +26,7 @@ def snapshot(a_score: float, b_score: float) -> LeaderboardSnapshot:
         primary_direction="higher_is_better",
         n_bundles=2,
         n_models=2,
-        bundles=["bundle-a", "bundle-b"],
+        bundles=["a" * 64, "b" * 64],
         leaderboard=leaderboard,
     )
 
@@ -38,17 +40,13 @@ def test_compare_snapshots_reports_rank_and_score_change():
     by_model = {item.model_id: item for item in comparison.deltas}
     assert by_model["a"].rank_change == -1
     assert by_model["b"].rank_change == 1
-    assert by_model["a"].score_change == -0.05
-    assert by_model["b"].score_change == 0.15
+    assert by_model["a"].score_change == pytest.approx(-0.05)
+    assert by_model["b"].score_change == pytest.approx(0.15)
     assert comparison.changed_models == 2
 
 
 def test_compare_snapshots_rejects_incompatible_contract():
     previous = snapshot(0.9, 0.8)
     current = snapshot(0.9, 0.8).model_copy(update={"primary_metric": "accuracy"})
-    try:
+    with pytest.raises(ValueError, match="snapshot and leaderboard identities"):
         compare_snapshots(previous, current)
-    except ValueError as exc:
-        assert "primary_metric" in str(exc)
-    else:
-        raise AssertionError("expected incompatible snapshots to fail")

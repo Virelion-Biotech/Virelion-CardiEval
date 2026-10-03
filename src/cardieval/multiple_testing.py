@@ -3,27 +3,31 @@
 from __future__ import annotations
 
 from collections.abc import Sequence
+import math
+
+
+def _validated(pvalues: Sequence[float]) -> list[float]:
+    values = [float(p) for p in pvalues]
+    if any(not math.isfinite(p) or p < 0 or p > 1 for p in values):
+        raise ValueError("p-values must be finite numbers between 0 and 1")
+    return values
 
 
 def bonferroni(pvalues: Sequence[float]) -> list[float]:
     """Bonferroni-adjust p-values while preserving input order."""
-    values = [float(p) for p in pvalues]
+    values = _validated(pvalues)
     m = len(values)
     if m == 0:
         return []
-    if any(p < 0 or p > 1 for p in values):
-        raise ValueError("p-values must be between 0 and 1")
     return [min(1.0, p * m) for p in values]
 
 
 def benjamini_hochberg(pvalues: Sequence[float]) -> list[float]:
     """Benjamini-Hochberg false-discovery-rate adjusted p-values."""
-    values = [float(p) for p in pvalues]
+    values = _validated(pvalues)
     m = len(values)
     if m == 0:
         return []
-    if any(p < 0 or p > 1 for p in values):
-        raise ValueError("p-values must be between 0 and 1")
     order = sorted(range(m), key=values.__getitem__)
     adjusted = [0.0] * m
     running = 1.0

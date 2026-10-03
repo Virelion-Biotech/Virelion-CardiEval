@@ -5,13 +5,13 @@ from cardieval.publication_history import compare_snapshots, snapshot_hash
 from cardieval.scorecard import build_scorecard
 
 
-def snapshot(scores):
+def snapshot(scores, benchmark_id="bench"):
     entries = [
         LeaderboardEntry(rank=i + 1, model_id=model, score=score, n_reports=1)
         for i, (model, score) in enumerate(sorted(scores.items(), key=lambda x: -x[1]))
     ]
     return LeaderboardSnapshot(
-        benchmark_id="bench",
+        benchmark_id=benchmark_id,
         benchmark_version="1",
         task_id="task",
         split="test",
@@ -19,9 +19,9 @@ def snapshot(scores):
         primary_direction="higher_is_better",
         n_bundles=len(entries),
         n_models=len(entries),
-        bundles=[f"b-{x.model_id}" for x in entries],
+        bundles=["a" * 64 if x.model_id == "a" else "b" * 64 for x in entries],
         leaderboard=Leaderboard(
-            benchmark_id="bench",
+            benchmark_id=benchmark_id,
             benchmark_version="1",
             split="test",
             metric="auroc",
@@ -57,7 +57,7 @@ def test_release_manifest_is_deterministic():
 def test_release_verification_detects_tampering(tmp_path):
     path = tmp_path / "report.json"
     path.write_text("stable", encoding="utf-8")
-    record = fingerprint_file(path, kind="report")
+    record = fingerprint_file(path, kind="report").model_copy(update={"path": "report.json"})
     manifest = build_release_manifest(
         version="1.0.0", benchmark_id="bench", benchmark_version="1", task_id="task", publication_id="pub", artifacts=[record]
     )
@@ -67,9 +67,20 @@ def test_release_verification_detects_tampering(tmp_path):
     assert any("sha256 mismatch" in error for error in errors)
 
 
+def test_release_verification_detects_manifest_tampering():
+    artifact = ArtifactRecord(path="report.json", sha256="0" * 64, kind="report", size_bytes=10)
+    manifest = build_release_manifest(
+        version="1.0.0", benchmark_id="bench", benchmark_version="1", task_id="task", publication_id="pub", artifacts=[artifact]
+    )
+    tampered = manifest.model_copy(update={"publication_id": "tampered"})
+    errors = tampered.verify_self()
+    assert "release manifest self-hash mismatch" in errors
+    assert "release_id does not match manifest contents" in errors
+
+
 def test_scorecard_ranks_models_across_snapshots():
     first = snapshot({"a": 0.9, "b": 0.8})
-    second = snapshot({"a": 0.7, "b": 0.6})
+    second = snapshot({"a": 0.7, "b": 0.6}, benchmark_id="bench-2")
     scorecard = build_scorecard([first, second])
     assert scorecard.models[0].model_id == "a"
     assert scorecard.models[0].n_benchmarks == 2

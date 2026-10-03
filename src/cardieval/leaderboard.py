@@ -11,7 +11,7 @@ from .models import EvaluationReport
 
 
 class LeaderboardEntry(BaseModel):
-    model_config = ConfigDict(extra="forbid")
+    model_config = ConfigDict(extra="forbid", allow_inf_nan=False)
 
     rank: int = Field(ge=1)
     model_id: str = Field(min_length=1)
@@ -23,19 +23,25 @@ class LeaderboardEntry(BaseModel):
 class Leaderboard(BaseModel):
     """A ranked model table built only from compatible evaluation reports."""
 
-    model_config = ConfigDict(extra="forbid")
+    model_config = ConfigDict(extra="forbid", allow_inf_nan=False)
 
     benchmark_id: str = Field(min_length=1)
     benchmark_version: str = Field(min_length=1)
     split: str = Field(min_length=1)
     metric: str = Field(min_length=1)
-    direction: str = Field(min_length=1)
+    direction: str
     entries: list[LeaderboardEntry]
+
+    @property
+    def n_models(self) -> int:
+        return len(self.entries)
 
 
 def _metric(report: EvaluationReport, metric_name: str) -> float:
     for metric in report.metrics:
         if metric.name == metric_name:
+            if metric.direction == "informational":
+                raise ValueError(f"metric {metric_name!r} cannot be used as a leaderboard score")
             return metric.value
     raise ValueError(f"Report for {report.model_id!r} has no metric {metric_name!r}")
 
@@ -46,19 +52,14 @@ def build_leaderboard(
     metric: str,
     direction: str,
 ) -> Leaderboard:
-    """Rank models on a single benchmark/version/split and metric.
-
-    Reports must all belong to the same benchmark/version/split. A model may have
-    multiple reports; its score is the arithmetic mean across those reports.
-    """
+    """Rank models on a single benchmark/version/split and metric."""
     if not reports:
         raise ValueError("At least one evaluation report is required")
+    if direction not in {"higher_is_better", "lower_is_better"}:
+        raise ValueError("direction must be higher_is_better or lower_is_better")
     benchmark_id = reports[0].benchmark_id
     version = reports[0].benchmark_version
     split = reports[0].split
-    if direction not in {"higher_is_better", "lower_is_better"}:
-        raise ValueError("direction must be higher_is_better or lower_is_better")
-
     grouped: dict[str, list[float]] = {}
     benchmark_names: dict[str, set[str]] = {}
     for report in reports:
@@ -69,6 +70,9 @@ def build_leaderboard(
         ):
             raise ValueError("All reports must use the same benchmark, version, and split")
         value = _metric(report, metric)
+        report_metric = next(m for m in report.metrics if m.name == metric)
+        if report_metric.direction != direction:
+            raise ValueError(f"metric direction mismatch for {metric!r}")
         if not isfinite(value):
             raise ValueError(f"Non-finite metric value for model {report.model_id!r}")
         grouped.setdefault(report.model_id, []).append(value)
@@ -76,7 +80,10 @@ def build_leaderboard(
             f"{report.benchmark_id}@{report.benchmark_version}"
         )
 
-    scored = [(model_id, sum(values) / len(values), len(values)) for model_id, values in grouped.items()]
+    scored = [
+        (model_id, sum(values) / len(values), len(values))
+        for model_id, values in grouped.items()
+    ]
     scored.sort(key=lambda row: row[1], reverse=direction == "higher_is_better")
 
     entries: list[LeaderboardEntry] = []

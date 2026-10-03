@@ -7,7 +7,6 @@ from pathlib import Path
 from .benchmark_package import load_package, validate_submission_against_package, verify_package_artifacts
 from .bundle import build_bundle, save_bundle
 from .evaluator import evaluate_submission, load_submission, save_report, sha256_file
-from .provenance import canonical_json_hash
 from .run_manifest import EvaluationRunManifest, build_run_manifest, save_run_manifest
 
 
@@ -24,6 +23,8 @@ def run_evaluation(
     require_artifact_verification: bool = True,
 ) -> EvaluationRunManifest:
     """Verify a benchmark package, evaluate a submission, and emit traceable artifacts."""
+    package_path = Path(package_path)
+    submission_path = Path(submission_path)
     package = load_package(package_path)
     if require_artifact_verification:
         errors = verify_package_artifacts(package, package_root)
@@ -33,7 +34,13 @@ def run_evaluation(
     records = load_submission(submission_path)
     validate_submission_against_package(package, records, task_id=task_id)
     task = next(task for task in package.tasks if task.task_id == task_id)
-    report = evaluate_submission(package.manifest, records, model_id=model_id, task_contract=task)
+    report = evaluate_submission(
+        package.manifest,
+        records,
+        model_id=model_id,
+        task_contract=task,
+    )
+    task.validate_report_contract(report)
     save_report(report, report_path)
 
     submission_sha256 = sha256_file(submission_path)
@@ -45,7 +52,7 @@ def run_evaluation(
     )
     save_bundle(bundle, bundle_path)
 
-    package_sha256 = canonical_json_hash(package.model_dump(mode="json"))
+    package_sha256 = sha256_file(package_path)
     run_manifest = build_run_manifest(
         benchmark_id=package.benchmark_id,
         benchmark_version=package.version,
