@@ -1,0 +1,4 @@
+{"sample_id":"sample-001","y_true":0,"y_pred":0,"score":0.08}
+{"sample_id":"sample-002","y_true":1,"y_pred":1,"score":0.91}
+{"sample_id":"sample-003","y_true":0,"y_pred":0,"score":0.22}
+{"sample_id":"sample-004","y_true":1,"y_pred":0,"score":0.44}

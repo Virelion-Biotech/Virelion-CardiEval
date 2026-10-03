@@ -1,0 +1,19 @@
+{
+  "$schema":"https://json-schema.org/draft/2020-12/schema",
+  "title":"CardiEval SubmissionBundle",
+  "type":"object","additionalProperties":false,
+  "required":["schema_version","bundle_id","benchmark_id","benchmark_version","task_id","model_id","submission_sha256","benchmark_sha256","evaluation_fingerprint","report","created_at"],
+  "properties":{
+    "schema_version":{"const":"1.2"},
+    "bundle_id":{"type":"string","pattern":"^[0-9a-f]{64}$"},
+    "benchmark_id":{"type":"string","minLength":1},
+    "benchmark_version":{"type":"string","minLength":1},
+    "task_id":{"type":"string","minLength":1},
+    "model_id":{"type":"string","minLength":1},
+    "submission_sha256":{"type":"string","pattern":"^[0-9a-f]{64}$"},
+    "benchmark_sha256":{"type":"string","pattern":"^[0-9a-f]{64}$"},
+    "evaluation_fingerprint":{"type":"string","pattern":"^[0-9a-f]{64}$"},
+    "report":{"type":"object"},
+    "created_at":{"type":"string","format":"date-time"}
+  }
+}
