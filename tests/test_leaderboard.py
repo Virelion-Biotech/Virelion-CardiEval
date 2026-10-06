@@ -11,6 +11,7 @@ def report(model_id: str, score: float) -> EvaluationReport:
         benchmark_id="bench",
         benchmark_version="1.0",
         benchmark_sha256="0" * 64,
+        reference_sha256="5" * 64,
         task="classification",
         split="test",
         model_id=model_id,
@@ -28,6 +29,7 @@ def test_leaderboard_ranks_and_averages_models():
         [report("a", 0.8), report("a", 0.9), report("b", 0.85)],
         metric="macro_f1",
         direction="higher_is_better",
+        allow_repeated_models=True,
     )
     assert [entry.model_id for entry in board.entries] == ["a", "b"]
     assert board.entries[0].score == pytest.approx(0.85)

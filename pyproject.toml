@@ -41,8 +41,7 @@ packages = ["src/cardieval"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-addopts = "-q"
-strict_markers = true
+addopts = "-q --strict-markers"
 
 [tool.ruff]
 line-length = 100

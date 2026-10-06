@@ -31,6 +31,16 @@ class SubmissionBundle(BaseModel):
     def fingerprint_payload(self) -> dict:
         report = self.report.model_dump(mode="json")
         report.pop("created_at", None)
+        # Preserve fingerprints of pre-0.5 reports, whose metric schema did not
+        # include uncertainty metadata or the canonical reference hash.
+        if self.report.schema_version == "0.4":
+            report.pop("reference_sha256", None)
+            old_keys = {"name", "value", "ci_low", "ci_high", "n", "direction"}
+            report["metrics"] = [{k: v for k, v in m.items() if k in old_keys}
+                                 for m in report["metrics"]]
+            for subgroup in report["subgroups"]:
+                subgroup["metrics"] = [{k: v for k, v in m.items() if k in old_keys}
+                                       for m in subgroup["metrics"]]
         return {
             "benchmark_id": self.benchmark_id,
             "benchmark_version": self.benchmark_version,

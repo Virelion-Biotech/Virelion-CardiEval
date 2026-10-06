@@ -20,6 +20,8 @@
         "label_schema":{"type":"object","additionalProperties":{"type":"string"}},
         "metadata":{"type":"object","additionalProperties":{"type":"string"}},
         "authoritative_labels":{"type":["object","null"]},
+        "authoritative_clusters":{"type":["object","null"],"additionalProperties":{"type":"string","minLength":1}},
+        "authoritative_queries":{"type":["object","null"],"additionalProperties":{"type":"string","minLength":1}},
         "authoritative_subgroups":{"type":["object","null"],"additionalProperties":{"type":"string"}}
       }
     },
@@ -38,6 +40,7 @@
           "primary_direction":{"enum":["higher_is_better","lower_is_better"]},
           "splits":{"type":"array","minItems":1,"uniqueItems":true,"items":{"enum":["train","validation","test","external"]}},
           "description":{"type":"string"},
+          "expected_dataset_sha256":{"type":["string","null"],"pattern":"^[0-9a-f]{64}$"},
           "requires_authoritative_labels":{"type":"boolean"}
         }
       }

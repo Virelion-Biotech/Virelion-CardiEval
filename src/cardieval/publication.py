@@ -18,9 +18,11 @@ class LeaderboardSnapshot(BaseModel):
 
     model_config = ConfigDict(extra="forbid", allow_inf_nan=False)
 
-    schema_version: str = "1.1"
+    schema_version: str = "1.2"
     benchmark_id: str = Field(min_length=1)
     benchmark_version: str = Field(min_length=1)
+    benchmark_sha256: str | None = Field(default=None, pattern=r"^[0-9a-f]{64}$")
+    reference_sha256: str | None = Field(default=None, pattern=r"^[0-9a-f]{64}$")
     task_id: str = Field(min_length=1)
     split: str = Field(min_length=1)
     primary_metric: str = Field(min_length=1)
@@ -51,6 +53,12 @@ class LeaderboardSnapshot(BaseModel):
             or self.leaderboard.direction != self.primary_direction
         ):
             raise ValueError("snapshot and leaderboard identities do not match")
+        if self.benchmark_sha256 != self.leaderboard.benchmark_sha256:
+            raise ValueError("snapshot and leaderboard dataset hashes do not match")
+        if self.reference_sha256 != self.leaderboard.reference_sha256:
+            raise ValueError("snapshot and leaderboard reference hashes do not match")
+        if self.leaderboard.task_id is not None and self.leaderboard.task_id != self.task_id:
+            raise ValueError("snapshot and leaderboard task identities do not match")
         return self
 
 
@@ -63,6 +71,7 @@ def ingest_bundles(
     seen_models: set[str] = set()
     seen_bundles: set[str] = set()
     seen_splits: set[str] = set()
+    seen_hashes: set[str] = set()
     for bundle in bundles:
         bundle.verify_integrity()
         if bundle.benchmark_id != task.benchmark_id or bundle.benchmark_version != task.version:
@@ -70,6 +79,8 @@ def ingest_bundles(
         if bundle.task_id != task.task_id:
             raise ValueError(f"bundle task_id {bundle.task_id!r} does not match {task.task_id!r}")
         task.validate_report_contract(bundle.report)
+        if bundle.report.reference_sha256 is None:
+            raise ValueError("Publication requires a reference hash; re-evaluate legacy reports")
         if bundle.model_id != bundle.report.model_id:
             raise ValueError("bundle model_id does not match report model_id")
         if bundle.benchmark_sha256 != bundle.report.benchmark_sha256:
@@ -81,11 +92,14 @@ def ingest_bundles(
         seen_bundles.add(bundle.bundle_id)
         seen_models.add(bundle.model_id)
         seen_splits.add(bundle.report.split)
+        seen_hashes.add(bundle.benchmark_sha256)
         accepted.append(bundle)
     if not accepted:
         raise ValueError("At least one bundle is required")
     if len(seen_splits) != 1:
         raise ValueError("all bundles in a publication set must use the same split")
+    if len(seen_hashes) != 1:
+        raise ValueError("all bundles in a publication set must use the same benchmark dataset hash")
     return accepted
 
 
@@ -104,6 +118,8 @@ def publish_leaderboard(
     return LeaderboardSnapshot(
         benchmark_id=task.benchmark_id,
         benchmark_version=task.version,
+        benchmark_sha256=accepted[0].benchmark_sha256,
+        reference_sha256=accepted[0].report.reference_sha256,
         task_id=task.task_id,
         split=accepted[0].report.split,
         primary_metric=task.primary_metric,

@@ -17,6 +17,10 @@ class ComparisonDecision(BaseModel):
     metric: str = Field(min_length=1)
     direction: Literal["higher_is_better", "lower_is_better"]
     alpha: float = Field(gt=0, lt=1)
+    ci_confidence: float = Field(default=0.95, gt=0, lt=1)
+    ci_sidedness: Literal["two_sided", "lower", "upper"] = "two_sided"
+    pvalue_hypothesis: Literal["equality", "superiority_margin", "non_inferiority_margin", "inferiority_margin"] | None = None
+    pvalue_margin: float | None = Field(default=None, ge=0)
     margin: float = Field(ge=0)
     observed_difference: float
     ci_low: float
@@ -56,13 +60,19 @@ def decide_comparison(
     alpha: float = 0.05,
     margin: float = 0.0,
     adjusted_pvalue: float | None = None,
+    ci_confidence: float = 0.95,
+    ci_sidedness: Literal["two_sided", "lower", "upper"] = "two_sided",
+    pvalue_hypothesis: Literal["equality", "superiority_margin", "non_inferiority_margin", "inferiority_margin"] = "equality",
+    pvalue_margin: float | None = None,
 ) -> ComparisonDecision:
-    """Apply a two-sided CI + optional adjusted-p-value decision rule.
+    """Apply a confidence-bound decision with explicit error-rate metadata.
 
     The difference is interpreted as model A minus model B after orienting the
     metric so positive values favor model A. The CI must clear the superiority
-    or non-inferiority margin and the adjusted p-value must be below alpha when
-    supplied.
+    or non-inferiority margin. Supplied p-values must target the candidate's
+    null hypothesis; equality p-values cannot gate nonzero-margin inference.
+    ``lower``/``upper`` identify one-sided bounds in the raw A-minus-B metric.
+    Caller-supplied metadata must describe how bounds were actually computed.
     """
     if not math.isfinite(observed_difference):
         raise ValueError("observed_difference must be finite")
@@ -72,33 +82,63 @@ def decide_comparison(
         raise ValueError("adjusted_pvalue must be finite")
     if not 0 < alpha < 1:
         raise ValueError("alpha must be in (0, 1)")
-    if margin < 0:
+    if not math.isfinite(margin) or margin < 0:
         raise ValueError("margin must be non-negative")
+    if direction not in {"higher_is_better", "lower_is_better"}:
+        raise ValueError("unknown metric direction")
+    if not 0 < ci_confidence < 1:
+        raise ValueError("ci_confidence must be in (0, 1)")
+    if ci_sidedness not in {"two_sided", "lower", "upper"}:
+        raise ValueError("unknown confidence interval sidedness")
+    if ci_confidence < 1-alpha-1e-12:
+        raise ValueError("CI confidence is insufficient for the declared alpha")
+    if pvalue_hypothesis not in {"equality", "superiority_margin", "non_inferiority_margin", "inferiority_margin"}:
+        raise ValueError("unknown p-value hypothesis")
+    if pvalue_margin is not None and (not math.isfinite(pvalue_margin) or pvalue_margin < 0):
+        raise ValueError("pvalue_margin must be finite and non-negative")
     if ci_low > ci_high:
         raise ValueError("ci_low must be <= ci_high")
     if adjusted_pvalue is not None and not 0 <= adjusted_pvalue <= 1:
         raise ValueError("adjusted_pvalue must be in [0, 1]")
 
+    if adjusted_pvalue is not None and margin > 0 and pvalue_hypothesis == "equality":
+        raise ValueError("equality p-value cannot gate inference about a nonzero margin")
+    if adjusted_pvalue is not None and pvalue_hypothesis != "equality":
+        if pvalue_margin is None or pvalue_margin != margin:
+            raise ValueError("margin-specific p-value must declare the matching pvalue_margin")
     adjusted_ok = adjusted_pvalue is None or adjusted_pvalue < alpha
     if direction == "lower_is_better":
         oriented_low, oriented_high = -ci_high, -ci_low
         oriented_difference = -observed_difference
+        oriented_sidedness = {"two_sided": "two_sided", "lower": "upper", "upper": "lower"}[ci_sidedness]
     else:
         oriented_low, oriented_high = ci_low, ci_high
         oriented_difference = observed_difference
+        oriented_sidedness = ci_sidedness
 
-    if oriented_low > margin and adjusted_ok:
+    lower_available = oriented_sidedness in {"two_sided", "lower"}
+    upper_available = oriented_sidedness in {"two_sided", "upper"}
+    if lower_available and oriented_low > margin:
         decision: Decision = "superior"
         rationale = "The confidence interval clears the superiority margin in the favorable direction."
-    elif oriented_low >= -margin and adjusted_ok:
+    elif lower_available and oriented_low > -margin:
         decision = "non_inferior"
         rationale = "The confidence interval stays above the non-inferiority boundary in the favorable orientation."
-    elif oriented_high < -margin and adjusted_ok:
+    elif upper_available and oriented_high < -margin:
         decision = "inferior"
         rationale = "The confidence interval lies beyond the adverse margin."
     else:
         decision = "inconclusive"
         rationale = "The interval and/or corrected significance evidence does not support a directional claim."
+
+    if adjusted_pvalue is not None and decision != "inconclusive":
+        required = {"superior": "superiority_margin", "non_inferior": "non_inferiority_margin", "inferior": "inferiority_margin"}[decision]
+        equality_allowed = margin == 0 and decision in {"superior", "inferior"}
+        if pvalue_hypothesis != required and not (pvalue_hypothesis == "equality" and equality_allowed):
+            raise ValueError(f"p-value hypothesis must target {required} for this decision")
+        if not adjusted_ok:
+            decision = "inconclusive"
+            rationale = "The confidence bound clears the margin, but its adjusted hypothesis-specific p-value fails alpha."
 
     if adjusted_pvalue is not None and adjusted_pvalue >= alpha:
         rationale += " The adjusted p-value does not meet alpha, so the claim is not statistically supported."
@@ -107,6 +147,10 @@ def decide_comparison(
         metric=metric,
         direction=direction,
         alpha=alpha,
+        ci_confidence=ci_confidence,
+        ci_sidedness=oriented_sidedness,
+        pvalue_hypothesis=pvalue_hypothesis if adjusted_pvalue is not None else None,
+        pvalue_margin=pvalue_margin if adjusted_pvalue is not None else None,
         margin=margin,
         observed_difference=oriented_difference,
         ci_low=oriented_low,

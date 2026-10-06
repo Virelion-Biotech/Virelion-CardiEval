@@ -1,0 +1,264 @@
+{
+  "schema_version": "1.2",
+  "bundle_id": "495228c5fdf041a57212d65395ab1fc90796085ec14fb4c4fc69b2b01693722c",
+  "benchmark_id": "cardiac-synthetic-validation",
+  "benchmark_version": "1.0.0",
+  "task_id": "binary-challenge-detection",
+  "model_id": "baseline",
+  "submission_sha256": "eb9f5e72f64f20c1206a18f0d372219d32d09c78bb880a01124348b244c147e1",
+  "benchmark_sha256": "1af5fc08fcd6ad873925d1bbe7d78e74e0b8aa03f53c949e0a2208e2ef7b3690",
+  "evaluation_fingerprint": "e7239facaff37f99567ae33cd0dcf76f817e350caa70ced46b3c7652b510d8cf",
+  "report": {
+    "schema_version": "0.4",
+    "evaluator_version": "1.4.1",
+    "benchmark_id": "cardiac-synthetic-validation",
+    "benchmark_version": "1.0.0",
+    "benchmark_sha256": "1af5fc08fcd6ad873925d1bbe7d78e74e0b8aa03f53c949e0a2208e2ef7b3690",
+    "task": "binary_classification",
+    "split": "test",
+    "model_id": "baseline",
+    "task_id": "binary-challenge-detection",
+    "primary_metric": "auroc",
+    "primary_value": 0.5591282314452499,
+    "primary_direction": "higher_is_better",
+    "ground_truth_source": "benchmark_manifest",
+    "created_at": "2026-10-05T19:48:15.108511Z",
+    "metrics": [
+      {
+        "name": "accuracy",
+        "value": 0.53,
+        "ci_low": 0.48795000000000005,
+        "ci_high": 0.574,
+        "n": 500,
+        "direction": "higher_is_better"
+      },
+      {
+        "name": "balanced_accuracy",
+        "value": 0.5317050484315864,
+        "ci_low": 0.4891958782656905,
+        "ci_high": 0.575774563104756,
+        "n": 500,
+        "direction": "higher_is_better"
+      },
+      {
+        "name": "macro_f1",
+        "value": 0.52995299529953,
+        "ci_low": 0.4863795325751411,
+        "ci_high": 0.5737118291965368,
+        "n": 500,
+        "direction": "higher_is_better"
+      },
+      {
+        "name": "auroc",
+        "value": 0.5591282314452499,
+        "ci_low": 0.5103075805652639,
+        "ci_high": 0.6093859327158591,
+        "n": 500,
+        "direction": "higher_is_better"
+      },
+      {
+        "name": "auprc",
+        "value": 0.5844253461114843,
+        "ci_low": 0.5245217867345059,
+        "ci_high": 0.6513349337156337,
+        "n": 500,
+        "direction": "higher_is_better"
+      },
+      {
+        "name": "brier",
+        "value": 0.284510413033282,
+        "ci_low": 0.2637495275321541,
+        "ci_high": 0.3052294551449947,
+        "n": 500,
+        "direction": "lower_is_better"
+      },
+      {
+        "name": "ece",
+        "value": 0.17226620200000003,
+        "ci_low": 0.13843515680000001,
+        "ci_high": 0.21887797879999996,
+        "n": 500,
+        "direction": "lower_is_better"
+      },
+      {
+        "name": "sensitivity",
+        "value": 0.4961832061068702,
+        "ci_low": 0.43938948306595366,
+        "ci_high": 0.5610707617112417,
+        "n": 500,
+        "direction": "higher_is_better"
+      },
+      {
+        "name": "specificity",
+        "value": 0.5672268907563025,
+        "ci_low": 0.506166739862392,
+        "ci_high": 0.629965803321963,
+        "n": 500,
+        "direction": "higher_is_better"
+      }
+    ],
+    "subgroups": [
+      {
+        "subgroup": "female",
+        "n": 222,
+        "metrics": [
+          {
+            "name": "accuracy",
+            "value": 0.5135135135135135,
+            "ci_low": 0.44594594594594594,
+            "ci_high": 0.5855855855855856,
+            "n": 222,
+            "direction": "higher_is_better"
+          },
+          {
+            "name": "balanced_accuracy",
+            "value": 0.5138561560341324,
+            "ci_low": 0.447684443618267,
+            "ci_high": 0.5848725898126239,
+            "n": 222,
+            "direction": "higher_is_better"
+          },
+          {
+            "name": "macro_f1",
+            "value": 0.513474025974026,
+            "ci_low": 0.44538551898185275,
+            "ci_high": 0.5834454548560772,
+            "n": 222,
+            "direction": "higher_is_better"
+          },
+          {
+            "name": "auroc",
+            "value": 0.5452255180820804,
+            "ci_low": 0.4692786731485754,
+            "ci_high": 0.6211909783247007,
+            "n": 222,
+            "direction": "higher_is_better"
+          },
+          {
+            "name": "auprc",
+            "value": 0.5080302269418984,
+            "ci_low": 0.4303272868010043,
+            "ci_high": 0.6103116364385567,
+            "n": 222,
+            "direction": "higher_is_better"
+          },
+          {
+            "name": "brier",
+            "value": 0.28738273121468466,
+            "ci_low": 0.2558217481521354,
+            "ci_high": 0.3200594256850014,
+            "n": 222,
+            "direction": "lower_is_better"
+          },
+          {
+            "name": "ece",
+            "value": 0.18893378378378378,
+            "ci_low": 0.13960685630630637,
+            "ci_high": 0.2607544531531531,
+            "n": 222,
+            "direction": "lower_is_better"
+          },
+          {
+            "name": "sensitivity",
+            "value": 0.5233644859813084,
+            "ci_low": 0.43157378740970076,
+            "ci_high": 0.6161781365052392,
+            "n": 222,
+            "direction": "higher_is_better"
+          },
+          {
+            "name": "specificity",
+            "value": 0.5043478260869565,
+            "ci_low": 0.408325,
+            "ci_high": 0.5982905982905983,
+            "n": 222,
+            "direction": "higher_is_better"
+          }
+        ],
+        "warning": null
+      },
+      {
+        "subgroup": "male",
+        "n": 278,
+        "metrics": [
+          {
+            "name": "accuracy",
+            "value": 0.5431654676258992,
+            "ci_low": 0.48201438848920863,
+            "ci_high": 0.6007194244604317,
+            "n": 278,
+            "direction": "higher_is_better"
+          },
+          {
+            "name": "balanced_accuracy",
+            "value": 0.5517178075006557,
+            "ci_low": 0.4919060527593462,
+            "ci_high": 0.609697293683267,
+            "n": 278,
+            "direction": "higher_is_better"
+          },
+          {
+            "name": "macro_f1",
+            "value": 0.5431122614040764,
+            "ci_low": 0.48198556640966006,
+            "ci_high": 0.6007142579868794,
+            "n": 278,
+            "direction": "higher_is_better"
+          },
+          {
+            "name": "auroc",
+            "value": 0.5726199842643588,
+            "ci_low": 0.5032592950145922,
+            "ci_high": 0.6386262614933802,
+            "n": 278,
+            "direction": "higher_is_better"
+          },
+          {
+            "name": "auprc",
+            "value": 0.6636254207270096,
+            "ci_low": 0.5861725703000238,
+            "ci_high": 0.7390415340917149,
+            "n": 278,
+            "direction": "higher_is_better"
+          },
+          {
+            "name": "brier",
+            "value": 0.28221669132007554,
+            "ci_low": 0.25441908943769326,
+            "ci_high": 0.31193396760539893,
+            "n": 278,
+            "direction": "lower_is_better"
+          },
+          {
+            "name": "ece",
+            "value": 0.16595352877697842,
+            "ci_low": 0.13153013462230215,
+            "ci_high": 0.2392526007194245,
+            "n": 278,
+            "direction": "lower_is_better"
+          },
+          {
+            "name": "sensitivity",
+            "value": 0.4774193548387097,
+            "ci_low": 0.4,
+            "ci_high": 0.5555555555555556,
+            "n": 278,
+            "direction": "higher_is_better"
+          },
+          {
+            "name": "specificity",
+            "value": 0.6260162601626016,
+            "ci_low": 0.5398166422614121,
+            "ci_high": 0.706766917293233,
+            "n": 278,
+            "direction": "higher_is_better"
+          }
+        ],
+        "warning": null
+      }
+    ],
+    "warnings": [],
+    "errors": []
+  },
+  "created_at": "2026-10-05T19:48:15.117520Z"
+}

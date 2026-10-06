@@ -23,7 +23,7 @@ class RobustnessSummary:
         ordered = np.asarray(list(self.values.values()), dtype=float)
         self.best = float(np.max(ordered) if direction == "higher_is_better" else np.min(ordered))
         self.worst = float(np.min(ordered) if direction == "higher_is_better" else np.max(ordered))
-        self.range = float(self.best - self.worst)
+        self.range = float(np.max(ordered) - np.min(ordered))
         self.mean = float(np.mean(ordered))
         self.std = float(np.std(ordered, ddof=0))
 

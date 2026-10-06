@@ -49,6 +49,8 @@ class BenchmarkManifest(BaseModel):
     metadata: dict[str, str] = Field(default_factory=dict)
     authoritative_labels: dict[str, float | int | str] | None = None
     authoritative_subgroups: dict[str, str] | None = None
+    authoritative_clusters: dict[str, str] | None = None
+    authoritative_queries: dict[str, str] | None = None
 
     @model_validator(mode="after")
     def validate_integrity(self) -> "BenchmarkManifest":
@@ -61,6 +63,13 @@ class BenchmarkManifest(BaseModel):
             raise ValueError("authoritative_labels must contain exactly the benchmark sample IDs")
         if self.authoritative_subgroups is not None and set(self.authoritative_subgroups) != expected:
             raise ValueError("authoritative_subgroups must contain exactly the benchmark sample IDs")
+        for name in ("authoritative_clusters", "authoritative_queries"):
+            mapping = getattr(self, name)
+            if mapping is not None:
+                if set(mapping) != expected or any(not v.strip() for v in mapping.values()):
+                    raise ValueError(f"{name} must contain exactly the sample IDs and nonblank units")
+        if self.authoritative_queries is not None and self.task != "ranking":
+            raise ValueError("authoritative_queries are only valid for ranking tasks")
         return self
 
     def sample_set(self) -> set[str]:
@@ -76,6 +85,12 @@ class MetricResult(BaseModel):
     ci_high: float | None = None
     n: int = Field(ge=1)
     direction: Literal["higher_is_better", "lower_is_better", "informational"]
+    ci_method: str | None = None
+    confidence_level: float | None = Field(default=None, gt=0, lt=1)
+    n_independent: int | None = Field(default=None, ge=1)
+    resampling_unit: Literal["record", "cluster", "query"] = "record"
+    uncertainty_warning: str | None = None
+    details: dict[str, object] = Field(default_factory=dict)
 
 
 class SubgroupResult(BaseModel):
@@ -102,6 +117,8 @@ class ModelComparison(BaseModel):
     wilcoxon_pvalue: float | None = Field(default=None, ge=0, le=1)
     winner: Literal["model_a", "model_b", "tie", "undetermined"]
     n: int = Field(ge=2)
+    n_independent: int | None = Field(default=None, ge=2)
+    resampling_unit: Literal["record", "cluster"] = "record"
 
 
 class EvaluationReport(BaseModel):
@@ -109,11 +126,12 @@ class EvaluationReport(BaseModel):
 
     model_config = ConfigDict(extra="forbid", allow_inf_nan=False)
 
-    schema_version: str = "0.4"
+    schema_version: str = "0.5"
     evaluator_version: str = Field(min_length=1)
     benchmark_id: str = Field(min_length=1)
     benchmark_version: str = Field(min_length=1)
     benchmark_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+    reference_sha256: str | None = Field(default=None, pattern=r"^[0-9a-f]{64}$")
     task: TaskType
     split: SplitName
     model_id: str = Field(min_length=1)

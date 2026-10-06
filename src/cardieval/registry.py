@@ -35,6 +35,7 @@ class BenchmarkTask(BaseModel):
     splits: list[SplitName] = Field(min_length=1)
     description: str = ""
     requires_authoritative_labels: bool = False
+    expected_dataset_sha256: str | None = Field(default=None, pattern=r"^[0-9a-f]{64}$")
 
     @model_validator(mode="after")
     def validate_contract(self) -> "BenchmarkTask":
@@ -61,12 +62,17 @@ class BenchmarkTask(BaseModel):
 
     def validate_manifest(self, manifest: BenchmarkManifest) -> None:
         """Ensure a benchmark manifest is exactly compatible with this task."""
+        if self.expected_dataset_sha256 is not None and manifest.dataset_sha256 != self.expected_dataset_sha256:
+            raise ValueError("manifest dataset hash does not match task expected dataset hash")
         if manifest.benchmark_id != self.benchmark_id:
             raise ValueError("task benchmark_id does not match manifest")
         if manifest.version != self.version:
             raise ValueError("task version does not match manifest")
         if manifest.task != self.task_type:
             raise ValueError("task_type does not match manifest task")
+        if self.task_type == "binary_classification" and manifest.authoritative_labels is not None:
+            if any(label not in (0, 1) for label in manifest.authoritative_labels.values()):
+                raise ValueError("binary_classification requires authoritative labels 0/1")
         if manifest.split not in self.splits:
             raise ValueError(f"split {manifest.split!r} is not permitted by task {self.task_id!r}")
         if self.requires_authoritative_labels and manifest.authoritative_labels is None:
@@ -76,6 +82,8 @@ class BenchmarkTask(BaseModel):
 
     def validate_report_contract(self, report: EvaluationReport) -> None:
         """Validate a completed evaluation report against this task contract."""
+        if self.expected_dataset_sha256 is not None and report.benchmark_sha256 != self.expected_dataset_sha256:
+            raise ValueError("report dataset hash does not match task expected dataset hash")
         if report.benchmark_id != self.benchmark_id:
             raise ValueError("report benchmark_id does not match task")
         if report.benchmark_version != self.version:

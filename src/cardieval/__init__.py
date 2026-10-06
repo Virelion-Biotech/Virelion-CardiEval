@@ -9,6 +9,7 @@ from .calibration_curves import CalibrationBin, calibration_curve
 from .comparison import compare_predictions
 from .comparison_report import ComparisonReport, build_comparison_report
 from .confidence import paired_difference_ci
+from .stats import binomial_accuracy_ci
 from .decision import ComparisonDecision, QualityGate, ReleaseGateReport, decide_comparison, evaluate_release_gates
 from .diagnostics import cohen_kappa, confusion_matrix_counts, matthews_correlation, negative_predictive_value, positive_predictive_value, sensitivity, specificity
 from .evaluator import EvaluationReport, evaluate_submission
@@ -36,7 +37,7 @@ __all__ = [
     "LeaderboardEntry", "LeaderboardSnapshot", "MetricResult", "ModelComparison", "ModelScorecard",
     "PredictionRecord", "PredictionSubmission", "PublicationComparison", "QualityGate", "ReleaseGateReport",
     "ReleaseManifest", "Scorecard", "StressResult", "SubgroupResult", "SubmissionBundle", "TaskRegistry",
-    "accuracy", "aggregate_stress", "artifact_manifest", "auprc", "auroc", "balanced_accuracy",
+    "accuracy", "aggregate_stress", "artifact_manifest", "auprc", "auroc", "balanced_accuracy", "binomial_accuracy_ci",
     "expected_calibration_error", "benjamini_hochberg", "brier_score", "bonferroni", "build_bundle", "build_comparison_report",
     "build_leaderboard", "build_release_manifest", "build_run_manifest", "build_scorecard",
     "build_submission_envelope", "calibration_curve", "canonical_json_hash", "cohen_kappa", "compare_predictions",

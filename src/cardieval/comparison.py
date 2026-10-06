@@ -8,7 +8,7 @@ import numpy as np
 
 from .metrics import METRIC_DIRECTIONS
 from .models import ModelComparison
-from .stats import paired_permutation_pvalue, wilcoxon_pvalue
+from .stats import _cluster_indices, paired_permutation_pvalue, wilcoxon_pvalue
 
 
 def compare_predictions(
@@ -21,6 +21,8 @@ def compare_predictions(
     samplewise_score: Callable | None = None,
     n_resamples: int = 5000,
     seed: int = 0,
+    clusters: Sequence | None = None,
+    cluster_aggregate: Callable | None = None,
 ) -> ModelComparison:
     """Compare two models on identical samples with a paired permutation test.
 
@@ -34,11 +36,15 @@ def compare_predictions(
     b = np.asarray(pred_b)
     if not (len(yt) == len(a) == len(b) and len(yt) > 1):
         raise ValueError("all comparison inputs must have the same length >= 2")
+    groups = _cluster_indices(clusters, len(yt))
+    repeated = any(len(group) > 1 for group in groups)
+    if samplewise_score is not None and repeated and cluster_aggregate is None:
+        raise ValueError("Wilcoxon with repeated clusters requires cluster_aggregate")
     score_a = float(metric(yt, a))
     score_b = float(metric(yt, b))
     difference = score_a - score_b
     p_perm = paired_permutation_pvalue(
-        yt, a, b, metric, n_resamples=n_resamples, seed=seed
+        yt, a, b, metric, n_resamples=n_resamples, seed=seed, clusters=clusters
     )
     p_wilcoxon = None
     if samplewise_score is not None:
@@ -46,6 +52,9 @@ def compare_predictions(
         per_b = np.asarray(samplewise_score(yt, b), dtype=float)
         if per_a.shape != per_b.shape or per_a.shape != yt.shape:
             raise ValueError("samplewise_score must return one value per sample")
+        if clusters is not None and cluster_aggregate is not None:
+            per_a = np.asarray([cluster_aggregate(per_a[g]) for g in groups], dtype=float)
+            per_b = np.asarray([cluster_aggregate(per_b[g]) for g in groups], dtype=float)
         p_wilcoxon = wilcoxon_pvalue(per_a, per_b)
     direction = METRIC_DIRECTIONS.get(metric_name, "informational")
     if direction == "higher_is_better":
@@ -63,4 +72,6 @@ def compare_predictions(
         wilcoxon_pvalue=p_wilcoxon,
         winner=winner,
         n=len(yt),
+        n_independent=len(groups),
+        resampling_unit="cluster" if clusters is not None else "record",
     )
