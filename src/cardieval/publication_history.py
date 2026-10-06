@@ -64,6 +64,8 @@ def compare_snapshots(
     identity = (
         "benchmark_id",
         "benchmark_version",
+        "benchmark_sha256",
+        "reference_sha256",
         "task_id",
         "split",
         "primary_metric",

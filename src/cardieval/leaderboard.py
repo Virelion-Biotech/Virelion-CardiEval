@@ -27,6 +27,9 @@ class Leaderboard(BaseModel):
 
     benchmark_id: str = Field(min_length=1)
     benchmark_version: str = Field(min_length=1)
+    benchmark_sha256: str | None = Field(default=None, pattern=r"^[0-9a-f]{64}$")
+    reference_sha256: str | None = Field(default=None, pattern=r"^[0-9a-f]{64}$")
+    task_id: str | None = None
     split: str = Field(min_length=1)
     metric: str = Field(min_length=1)
     direction: str
@@ -51,6 +54,7 @@ def build_leaderboard(
     *,
     metric: str,
     direction: str,
+    allow_repeated_models: bool = False,
 ) -> Leaderboard:
     """Rank models on a single benchmark/version/split and metric."""
     if not reports:
@@ -60,9 +64,22 @@ def build_leaderboard(
     benchmark_id = reports[0].benchmark_id
     version = reports[0].benchmark_version
     split = reports[0].split
+    dataset_hash = reports[0].benchmark_sha256
+    reference_hash = reports[0].reference_sha256
+    if reference_hash is None:
+        raise ValueError("Leaderboard requires a reference hash; re-evaluate legacy reports")
+    task_identity = (reports[0].task, reports[0].task_id)
     grouped: dict[str, list[float]] = {}
     benchmark_names: dict[str, set[str]] = {}
     for report in reports:
+        if not report.ok:
+            raise ValueError("Cannot rank a report containing evaluation errors")
+        if report.benchmark_sha256 != dataset_hash:
+            raise ValueError("All reports must use the same benchmark dataset hash")
+        if report.reference_sha256 != reference_hash:
+            raise ValueError("All reports must use the same reference samples, labels, units and metric configuration")
+        if (report.task, report.task_id) != task_identity:
+            raise ValueError("All reports must use the same task identity")
         if (report.benchmark_id, report.benchmark_version, report.split) != (
             benchmark_id,
             version,
@@ -75,6 +92,8 @@ def build_leaderboard(
             raise ValueError(f"metric direction mismatch for {metric!r}")
         if not isfinite(value):
             raise ValueError(f"Non-finite metric value for model {report.model_id!r}")
+        if report.model_id in grouped and not allow_repeated_models:
+            raise ValueError(f"duplicate model_id in leaderboard: {report.model_id}")
         grouped.setdefault(report.model_id, []).append(value)
         benchmark_names.setdefault(report.model_id, set()).add(
             f"{report.benchmark_id}@{report.benchmark_version}"
@@ -109,6 +128,9 @@ def build_leaderboard(
     return Leaderboard(
         benchmark_id=benchmark_id,
         benchmark_version=version,
+        benchmark_sha256=dataset_hash,
+        reference_sha256=reference_hash,
+        task_id=task_identity[1],
         split=split,
         metric=metric,
         direction=direction,

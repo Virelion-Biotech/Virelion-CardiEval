@@ -41,6 +41,7 @@ def build_comparison_report(
     model_b: str,
     n_resamples: int = 5000,
     seed: int = 0,
+    clusters=None,
 ) -> ComparisonReport:
     expected_direction = METRIC_DIRECTIONS.get(metric_name)
     if expected_direction is None:
@@ -58,6 +59,7 @@ def build_comparison_report(
         metric_name=metric_name,
         n_resamples=n_resamples,
         seed=seed,
+        clusters=clusters,
     )
     fingerprint = evaluation_fingerprint(
         benchmark_id=benchmark_id,
@@ -65,7 +67,8 @@ def build_comparison_report(
         dataset_sha256=dataset_sha256,
         evaluator_version=evaluator_version,
         model_id=f"{model_a}|{model_b}",
-        config={"metric": metric_name, "direction": direction, "n_resamples": n_resamples, "seed": seed},
+        config={"metric": metric_name, "direction": direction, "n_resamples": n_resamples,
+                "seed": seed, "clusters": list(clusters) if clusters is not None else None},
     )
     return ComparisonReport(
         benchmark_id=benchmark_id,

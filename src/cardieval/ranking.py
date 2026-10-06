@@ -5,6 +5,7 @@ from __future__ import annotations
 from collections.abc import Sequence
 
 import numpy as np
+from math import comb
 
 
 def _arrays(y_true: Sequence[float | int], score: Sequence[float]) -> tuple[np.ndarray, np.ndarray]:
@@ -20,33 +21,53 @@ def _arrays(y_true: Sequence[float | int], score: Sequence[float]) -> tuple[np.n
 
 
 def reciprocal_rank(y_true: Sequence[float | int], score: Sequence[float]) -> float:
-    """Reciprocal rank of the first relevant item, using relevance > 0."""
+    """Expected reciprocal rank of the first hit under uniform score-tie order."""
     relevance, scores = _arrays(y_true, score)
-    order = np.argsort(-scores, kind="stable")
-    hits = relevance[order] > 0
-    if not np.any(hits):
-        return 0.0
-    return float(1.0 / (int(np.flatnonzero(hits)[0]) + 1))
+    offset = 0
+    for score_value in sorted(set(scores), reverse=True):
+        block = relevance[scores == score_value]
+        size, hits = len(block), int(np.sum(block > 0))
+        if hits:
+            return float(sum(comb(size-j, hits-1) / comb(size, hits) / (offset+j)
+                             for j in range(1, size-hits+2)))
+        offset += size
+    return 0.0
 
 
 def hit_rate_at_k(y_true: Sequence[float | int], score: Sequence[float], k: int = 10) -> float:
-    """Whether any relevant item is present in the top-k results."""
+    """Expected top-k hit indicator under uniform ordering of equal scores."""
     if k < 1:
         raise ValueError("k must be >= 1")
     relevance, scores = _arrays(y_true, score)
-    order = np.argsort(-scores, kind="stable")[:k]
-    return float(np.any(relevance[order] > 0))
+    remaining = k
+    for score_value in sorted(set(scores), reverse=True):
+        block = relevance[scores == score_value]
+        size, hits = len(block), int(np.sum(block > 0))
+        take = min(remaining, size)
+        if hits:
+            return float(1-comb(size-hits, take)/comb(size, take))
+        remaining -= take
+        if remaining <= 0:
+            break
+    return 0.0
 
 
 def ndcg_at_k(y_true: Sequence[float | int], score: Sequence[float], k: int = 10) -> float:
-    """Normalized discounted cumulative gain at k."""
+    """Linear-gain NDCG at k, averaging gain across equal-score ties."""
     if k < 1:
         raise ValueError("k must be >= 1")
     relevance, scores = _arrays(y_true, score)
-    pred_order = np.argsort(-scores, kind="stable")[:k]
-    gains = relevance[pred_order]
-    discounts = 1.0 / np.log2(np.arange(2, len(gains) + 2))
-    dcg = float(np.sum(gains * discounts))
+    count = min(k, len(scores))
+    discounts = 1.0 / np.log2(np.arange(2, count + 2))
+    dcg = 0.0
+    offset = 0
+    for score_value in sorted(set(scores), reverse=True):
+        block = relevance[scores == score_value]
+        take = min(len(block), count-offset)
+        dcg += float(np.mean(block)*np.sum(discounts[offset:offset+take]))
+        offset += take
+        if offset == count:
+            break
     ideal = np.sort(relevance)[::-1][:k]
     idcg = float(np.sum(ideal * discounts[: len(ideal)]))
     return 0.0 if idcg == 0 else dcg / idcg

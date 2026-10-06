@@ -16,8 +16,8 @@ class CalibrationBin(BaseModel):
     lower: float = Field(ge=0, le=1)
     upper: float = Field(ge=0, le=1)
     n: int = Field(ge=0)
-    mean_predicted: float
-    observed_rate: float
+    mean_predicted: float | None
+    observed_rate: float | None
 
 
 def calibration_curve(
@@ -51,8 +51,8 @@ def calibration_curve(
                 lower=float(lower),
                 upper=float(upper),
                 n=n,
-                mean_predicted=float(p[mask].mean()) if n else 0.0,
-                observed_rate=float(y[mask].mean()) if n else 0.0,
+                mean_predicted=float(p[mask].mean()) if n else None,
+                observed_rate=float(y[mask].mean()) if n else None,
             )
         )
     return bins

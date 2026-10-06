@@ -50,3 +50,13 @@ def test_compare_snapshots_rejects_incompatible_contract():
     current = snapshot(0.9, 0.8).model_copy(update={"primary_metric": "accuracy"})
     with pytest.raises(ValueError, match="snapshot and leaderboard identities"):
         compare_snapshots(previous, current)
+
+
+def test_compare_snapshots_rejects_different_reference_data():
+    previous = snapshot(.9, .8)
+    current = snapshot(.9, .8).model_copy(update={
+        "reference_sha256": "1"*64,
+        "leaderboard": previous.leaderboard.model_copy(update={"reference_sha256": "1"*64}),
+    })
+    with pytest.raises(ValueError, match="reference_sha256"):
+        compare_snapshots(previous, current)

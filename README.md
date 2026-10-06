@@ -86,6 +86,11 @@ A successful software test or evaluation run is not evidence of clinical validit
 
 ## Limitations
 
+Scientific repairs in 1.5.0 add patient/query-aware inference, exact IID accuracy
+intervals, reference-bound publication and explicit unavailable-metric reasons.
+See [scientific repairs](docs/SCIENTIFIC_REPAIRS.md) and
+[statistical methods](docs/STATISTICAL_METHODS.md) for contracts and migration.
+
 CardiEval evaluates serialized model outputs; it is not a raw ECG, imaging, or signal preprocessing pipeline. Real cardiac validation requires a frozen benchmark package with independently controlled labels, explicit split policy, subject-level separation where applicable, and an independently produced model submission. Synthetic validation only establishes software/contract behavior.
 
 Statistical significance does not establish clinical significance or causal validity. Hashes detect accidental substitution or tampering but do not provide authenticity; digital signing, key management, access control, and transport security remain deployment concerns.

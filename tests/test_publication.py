@@ -25,6 +25,7 @@ def bundle(model_id: str, score: float) -> SubmissionBundle:
         benchmark_id="bench",
         benchmark_version="1",
         benchmark_sha256="0" * 64,
+        reference_sha256="5" * 64,
         task="binary_classification",
         split="test",
         model_id=model_id,
