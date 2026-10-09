@@ -50,14 +50,10 @@ def balanced_accuracy(y_true: Sequence, y_pred: Sequence) -> float:
     a, b = _arrays(y_true, y_pred)
     observed = np.unique(a)
     if len(observed) < 2:
-        raise ValueError(
-            "balanced accuracy requires at least two observed classes"
-        )
+        raise ValueError("balanced accuracy requires at least two observed classes")
     unexpected = set(np.unique(b).tolist()) - set(observed.tolist())
     if unexpected:
-        raise ValueError(
-            "y_pred contains classes not observed in y_true"
-        )
+        raise ValueError("y_pred contains classes not observed in y_true")
     return float(balanced_accuracy_score(a, b))
 
 
@@ -121,6 +117,7 @@ METRIC_DIRECTIONS = {
     "matthews_correlation": "higher_is_better",
     "cohen_kappa": "higher_is_better",
     "brier": "lower_is_better",
+    "log_score": "lower_is_better",
     "ece": "lower_is_better",
     "mae": "lower_is_better",
     "rmse": "lower_is_better",

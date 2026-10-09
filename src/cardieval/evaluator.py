@@ -11,7 +11,12 @@ from typing import Callable, Sequence
 import numpy as np
 
 from ._version import __version__
-from .calibration import brier_score, expected_calibration_error
+from .calibration import (
+    brier_score,
+    expected_calibration_error,
+    binary_log_score,
+    calibration_intercept_slope,
+)
 from .calibration_curves import calibration_curve
 from .diagnostics import (
     cohen_kappa,
@@ -51,6 +56,7 @@ SCORE_METRICS: dict[str, Callable] = {
     "auroc": auroc,
     "auprc": auprc,
     "brier": brier_score,
+    "log_score": binary_log_score,
     "ece": expected_calibration_error,
 }
 DIAGNOSTIC_METRICS: dict[str, Callable] = {
@@ -132,7 +138,10 @@ def _apply_authoritative_reference(
         if manifest.authoritative_subgroups is not None:
             updates["subgroup"] = manifest.authoritative_subgroups[record.sample_id]
         updated.append(record.model_copy(update=updates))
-    return updated, "benchmark_manifest" if manifest.authoritative_labels is not None else "submission"
+    return (
+        updated,
+        "benchmark_manifest" if manifest.authoritative_labels is not None else "submission",
+    )
 
 
 def _metric_result(
@@ -160,9 +169,13 @@ def _metric_result(
             method = "clopper_pearson_binomial"
         else:
             if n_independent < 2:
-                raise ValueError("at least two independent units are required for bootstrap uncertainty")
+                raise ValueError(
+                    "at least two independent units are required for bootstrap uncertainty"
+                )
             draws = {}
-            low, high = bootstrap_ci(y_true, prediction, fn, seed=0, clusters=clusters, diagnostics=draws)
+            low, high = bootstrap_ci(
+                y_true, prediction, fn, seed=0, clusters=clusters, diagnostics=draws
+            )
             details["bootstrap"] = draws
             if draws["rejected_resamples"]:
                 uncertainty_warning = f"Metric {name!r} CI conditions on valid resamples; {draws['rejected_resamples']} draws rejected."
@@ -192,13 +205,19 @@ def _metric_result(
 
 
 def _classification_metrics(
-    records: Sequence[PredictionRecord], *, requested_metrics=None, warning_sink=None,
-    cluster_map=None, ece_bins=10,
+    records: Sequence[PredictionRecord],
+    *,
+    requested_metrics=None,
+    warning_sink=None,
+    cluster_map=None,
+    ece_bins=10,
 ) -> list[MetricResult]:
     yt = np.asarray([r.y_true for r in records])
     yp = np.asarray([r.y_pred for r in records])
-    requested = requested_metrics if requested_metrics is not None else (
-        set(BASE_CLASSIFICATION_METRICS) | set(SCORE_METRICS) | set(DIAGNOSTIC_METRICS)
+    requested = (
+        requested_metrics
+        if requested_metrics is not None
+        else (set(BASE_CLASSIFICATION_METRICS) | set(SCORE_METRICS) | set(DIAGNOSTIC_METRICS))
     )
     binary = set(np.unique(yt).tolist()).issubset({0, 1})
     clusters = [cluster_map[r.sample_id] for r in records] if cluster_map is not None else None
@@ -222,26 +241,53 @@ def _classification_metrics(
             prediction = np.asarray([r.score for r in records], dtype=float)
         else:
             prediction = yp
-        if name == 'ece':
+        if name == "ece":
+
             def fn(y, score):
                 return expected_calibration_error(y, score, n_bins=ece_bins)
+
         try:
             value = float(fn(yt, prediction))
             if not math.isfinite(value):
-                raise ValueError('undefined for this class/decision distribution')
-            if name == 'ece':
-                details = {'n_bins': ece_bins, 'binning': 'equal_width',
-                           'bins': [b.model_dump() for b in calibration_curve(yt, prediction, n_bins=ece_bins)],
-                           'interpretation': 'Binned ECE alone cannot establish calibration.'}
-            elif name == 'auprc':
-                details = {'estimator': 'average_precision'}
+                raise ValueError("undefined for this class/decision distribution")
+            if name == "ece":
+                details = {
+                    "n_bins": ece_bins,
+                    "binning": "equal_width",
+                    "bins": [
+                        b.model_dump() for b in calibration_curve(yt, prediction, n_bins=ece_bins)
+                    ],
+                    "interpretation": "Binned ECE alone cannot establish calibration.",
+                }
+            elif name == "brier":
+                try:
+                    details["calibration_coefficients"] = calibration_intercept_slope(
+                        yt, prediction
+                    )
+                except ValueError as exc:
+                    details["calibration_coefficients_status"] = str(exc)
+            elif name == "log_score":
+                details = {"probability_clip_epsilon": float(np.finfo(float).eps)}
+            elif name == "auprc":
+                details = {"estimator": "average_precision"}
         except ValueError as exc:
             if warning_sink is not None:
                 warning_sink.append(f"Metric {name!r} was omitted: {exc}")
             continue
-        results.append(_metric_result(name, value, len(records), fn, yt, prediction,
-            direction=METRIC_DIRECTIONS[name], clusters=clusters,
-            warning_sink=warning_sink, details=details))
+        results.append(
+            _metric_result(
+                name,
+                value,
+                len(records),
+                fn,
+                yt,
+                prediction,
+                direction=METRIC_DIRECTIONS[name],
+                clusters=clusters,
+                warning_sink=warning_sink,
+                details=details,
+            )
+        )
     return results
 
 
@@ -250,21 +296,37 @@ def _regression_metrics(records, *, requested_metrics=None, cluster_map=None, wa
     yp = np.asarray([float(r.y_pred) for r in records])
     clusters = [cluster_map[r.sample_id] for r in records] if cluster_map is not None else None
     requested = requested_metrics if requested_metrics is not None else set(REGRESSION_METRICS)
-    return [_metric_result(name, fn(yt, yp), len(records), fn, yt, yp,
-        direction=METRIC_DIRECTIONS[name], clusters=clusters, warning_sink=warning_sink)
-        for name, fn in REGRESSION_METRICS.items() if name in requested]
+    return [
+        _metric_result(
+            name,
+            fn(yt, yp),
+            len(records),
+            fn,
+            yt,
+            yp,
+            direction=METRIC_DIRECTIONS[name],
+            clusters=clusters,
+            warning_sink=warning_sink,
+        )
+        for name, fn in REGRESSION_METRICS.items()
+        if name in requested
+    ]
 
 
-def _ranking_metrics(records, *, requested_metrics=None, query_map=None, cluster_map=None, warning_sink=None):
+def _ranking_metrics(
+    records, *, requested_metrics=None, query_map=None, cluster_map=None, warning_sink=None
+):
     if any(r.score is None for r in records):
         raise ValueError("ranking evaluation requires a score for every prediction")
     requested = requested_metrics if requested_metrics is not None else set(RANKING_METRICS)
     groups = {}
     for record in records:
-        query = query_map[record.sample_id] if query_map is not None else '__single_list__'
+        query = query_map[record.sample_id] if query_map is not None else "__single_list__"
         groups.setdefault(query, []).append(record)
     if query_map is None and warning_sink is not None:
-        warning_sink.append('Ranking has no authoritative query map: interpreted as one fixed query; no population CI.')
+        warning_sink.append(
+            "Ranking has no authoritative query map: interpreted as one fixed query; no population CI."
+        )
     results = []
     for name, fn in RANKING_METRICS.items():
         if name not in requested:
@@ -275,54 +337,98 @@ def _ranking_metrics(records, *, requested_metrics=None, query_map=None, cluster
             if cluster_map is not None:
                 owners = {cluster_map[r.sample_id] for r in group}
                 if len(owners) != 1:
-                    raise ValueError('each ranking query must belong to exactly one authoritative cluster')
+                    raise ValueError(
+                        "each ranking query must belong to exactly one authoritative cluster"
+                    )
                 units.append(next(iter(owners)))
-        result = _metric_result(name, float(np.mean(values)), len(values),
-            lambda y, scores: float(np.mean(scores)), np.zeros(len(values)), values,
-            direction=METRIC_DIRECTIONS[name], clusters=units if cluster_map is not None else None,
+        result = _metric_result(
+            name,
+            float(np.mean(values)),
+            len(values),
+            lambda y, scores: float(np.mean(scores)),
+            np.zeros(len(values)),
+            values,
+            direction=METRIC_DIRECTIONS[name],
+            clusters=units if cluster_map is not None else None,
             warning_sink=warning_sink,
-            details={'n_queries': len(groups), 'aggregation': 'equal_query_mean',
-                     'tie_policy': 'uniform_expected_rank', 'ndcg_gain': 'linear'})
+            details={
+                "n_queries": len(groups),
+                "aggregation": "equal_query_mean",
+                "tie_policy": "uniform_expected_rank",
+                "ndcg_gain": "linear",
+            },
+        )
         result.n = len(records)
-        result.resampling_unit = 'cluster' if cluster_map is not None else 'query'
+        result.resampling_unit = "cluster" if cluster_map is not None else "query"
         results.append(result)
     return results
 
 
-def _subgroup_results(records, task, *, min_n, requested_metrics=None, cluster_map=None, query_map=None, ece_bins=10):
+def _subgroup_results(
+    records, task, *, min_n, requested_metrics=None, cluster_map=None, query_map=None, ece_bins=10
+):
     if min_n < 1:
-        raise ValueError('subgroup_min_n must be >= 1')
+        raise ValueError("subgroup_min_n must be >= 1")
     groups = {}
     for record in records:
         if record.subgroup is not None:
             groups.setdefault(record.subgroup, []).append(record)
-    if task == 'ranking' and query_map is not None:
+    if task == "ranking" and query_map is not None:
         memberships = {}
         for record in records:
             memberships.setdefault(query_map[record.sample_id], set()).add(record.subgroup)
         if any(len(values) != 1 for values in memberships.values()):
-            raise ValueError('ranking subgroup assignments must not split a query candidate list')
+            raise ValueError("ranking subgroup assignments must not split a query candidate list")
     results = []
     for name, group in sorted(groups.items()):
-        independent = len({cluster_map[r.sample_id] for r in group}) if cluster_map is not None else (
-            len({query_map[r.sample_id] for r in group}) if task == 'ranking' and query_map is not None else len(group))
+        independent = (
+            len({cluster_map[r.sample_id] for r in group})
+            if cluster_map is not None
+            else (
+                len({query_map[r.sample_id] for r in group})
+                if task == "ranking" and query_map is not None
+                else len(group)
+            )
+        )
         notes = []
         if independent < min_n:
-            notes.append(f'subgroup has n={independent} independent units below recommended minimum n={min_n}')
-        if task in {'classification', 'binary_classification'}:
-            metrics = _classification_metrics(group, requested_metrics=requested_metrics,
-                cluster_map=cluster_map, warning_sink=notes, ece_bins=ece_bins)
-        elif task == 'regression':
-            metrics = _regression_metrics(group, requested_metrics=requested_metrics,
-                cluster_map=cluster_map, warning_sink=notes)
-        elif task == 'ranking':
-            metrics = _ranking_metrics(group, requested_metrics=requested_metrics,
-                query_map=query_map, cluster_map=cluster_map, warning_sink=notes)
+            notes.append(
+                f"subgroup has n={independent} independent units below recommended minimum n={min_n}"
+            )
+        if task in {"classification", "binary_classification"}:
+            metrics = _classification_metrics(
+                group,
+                requested_metrics=requested_metrics,
+                cluster_map=cluster_map,
+                warning_sink=notes,
+                ece_bins=ece_bins,
+            )
+        elif task == "regression":
+            metrics = _regression_metrics(
+                group,
+                requested_metrics=requested_metrics,
+                cluster_map=cluster_map,
+                warning_sink=notes,
+            )
+        elif task == "ranking":
+            metrics = _ranking_metrics(
+                group,
+                requested_metrics=requested_metrics,
+                query_map=query_map,
+                cluster_map=cluster_map,
+                warning_sink=notes,
+            )
         else:
             metrics = []
-            notes.append(f'subgroup metrics not implemented for {task}')
-        results.append(SubgroupResult(subgroup=name, n=len(group), metrics=metrics,
-                                      warning='; '.join(notes) if notes else None))
+            notes.append(f"subgroup metrics not implemented for {task}")
+        results.append(
+            SubgroupResult(
+                subgroup=name,
+                n=len(group),
+                metrics=metrics,
+                warning="; ".join(notes) if notes else None,
+            )
+        )
     return results
 
 
@@ -352,7 +458,9 @@ def evaluate_submission(
     requested_metrics = set(task_contract.allowed_metrics) if task_contract is not None else None
     warnings: list[str] = []
     if manifest.authoritative_clusters is None and manifest.task != "ranking":
-        warnings.append("Uncertainty assumes independent records; no authoritative subject/cluster map was supplied.")
+        warnings.append(
+            "Uncertainty assumes independent records; no authoritative subject/cluster map was supplied."
+        )
 
     if manifest.task in {"classification", "binary_classification"}:
         metrics = _classification_metrics(
@@ -363,12 +471,20 @@ def evaluate_submission(
             ece_bins=ece_bins,
         )
     elif manifest.task == "regression":
-        metrics = _regression_metrics(ordered, requested_metrics=requested_metrics,
-            cluster_map=manifest.authoritative_clusters, warning_sink=warnings)
+        metrics = _regression_metrics(
+            ordered,
+            requested_metrics=requested_metrics,
+            cluster_map=manifest.authoritative_clusters,
+            warning_sink=warnings,
+        )
     elif manifest.task == "ranking":
-        metrics = _ranking_metrics(ordered, requested_metrics=requested_metrics,
-            query_map=manifest.authoritative_queries, cluster_map=manifest.authoritative_clusters,
-            warning_sink=warnings)
+        metrics = _ranking_metrics(
+            ordered,
+            requested_metrics=requested_metrics,
+            query_map=manifest.authoritative_queries,
+            cluster_map=manifest.authoritative_clusters,
+            warning_sink=warnings,
+        )
     else:
         raise NotImplementedError(f"Task type not implemented yet: {manifest.task}")
 
@@ -386,7 +502,9 @@ def evaluate_submission(
         if primary is None:
             raise ValueError(f"Primary metric {primary_metric!r} was not produced by evaluator")
         if primary.direction != primary_direction:
-            raise ValueError(f"Primary metric {primary_metric!r} direction does not match task contract")
+            raise ValueError(
+                f"Primary metric {primary_metric!r} direction does not match task contract"
+            )
         primary_value = primary.value
     if ground_truth_source == "submission":
         warnings.append(
@@ -404,20 +522,20 @@ def evaluate_submission(
         ece_bins=ece_bins,
     )
     warnings.extend(
-        f"Subgroup '{item.subgroup}': {item.warning}"
-        for item in subgroups
-        if item.warning
+        f"Subgroup '{item.subgroup}': {item.warning}" for item in subgroups if item.warning
     )
     reference = {
-        "task": manifest.task, "split": manifest.split,
+        "task": manifest.task,
+        "split": manifest.split,
         "samples": sorted((r.sample_id, r.y_true, r.subgroup) for r in ordered),
         "clusters": manifest.authoritative_clusters,
         "queries": manifest.authoritative_queries,
         "ece_bins": ece_bins,
         "allowed_metrics": sorted(requested_metrics) if requested_metrics is not None else None,
     }
-    reference_sha256 = hashlib.sha256(json.dumps(reference, sort_keys=True,
-        separators=(",", ":"), allow_nan=False).encode()).hexdigest()
+    reference_sha256 = hashlib.sha256(
+        json.dumps(reference, sort_keys=True, separators=(",", ":"), allow_nan=False).encode()
+    ).hexdigest()
     report = EvaluationReport(
         evaluator_version=__version__,
         benchmark_id=manifest.benchmark_id,
