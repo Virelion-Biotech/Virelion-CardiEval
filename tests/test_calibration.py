@@ -15,3 +15,24 @@ def test_ece_perfectly_calibrated_two_bins() -> None:
 def test_probability_range_is_enforced() -> None:
     with pytest.raises(ValueError):
         brier_score(np.array([0, 1]), np.array([-0.1, 1.1]))
+
+
+def test_log_score_known_probability_and_unstable_slope():
+    from cardieval.calibration import binary_log_score, calibration_intercept_slope
+
+    assert abs(binary_log_score([0, 1], [0.5, 0.5]) - np.log(2)) < 1e-12
+    with pytest.raises(ValueError):
+        calibration_intercept_slope([0, 1], [0.5, 0.5])
+    with pytest.raises(ValueError):
+        calibration_intercept_slope([0, 0, 1, 1], [0.1, 0.2, 0.8, 0.9])
+
+
+def test_logistic_calibration_known_nonseparated_population():
+    from cardieval.calibration import calibration_intercept_slope
+
+    # At probabilities .2 and .8 the empirical frequencies exactly match.
+    result = calibration_intercept_slope(
+        [0] * 8 + [1] * 2 + [0] * 2 + [1] * 8, [0.2] * 10 + [0.8] * 10
+    )
+    assert result["intercept"] == pytest.approx(0, abs=1e-6)
+    assert result["slope"] == pytest.approx(1, abs=1e-6)
