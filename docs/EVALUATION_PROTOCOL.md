@@ -19,9 +19,29 @@ For independent evaluation, BenchmarkTask.requires_authoritative_labels should b
 
 CardiEval computes task-appropriate metrics and uncertainty intervals. The task contract is authoritative for the primary score used for publication.
 
-Binary classification supports accuracy, balanced accuracy, macro-F1, AUROC, AUPRC, Brier score, ECE, and threshold-dependent diagnostic metrics. Regression supports MAE and RMSE. Ranking supports MRR, hit-rate@10, and NDCG@10.
+Binary classification supports accuracy, balanced accuracy, macro-F1, AUROC, AUPRC, Brier score, negative log score, ECE, and threshold-dependent diagnostic metrics. Regression supports MAE and RMSE. Ranking supports MRR, hit-rate@10, and NDCG@10.
 
 The evaluator rejects metrics that are incompatible with the declared task type and rejects primary-metric direction mismatches.
+
+For a binary probabilistic task, prespecify `requires_probability_reporting: true`
+and include `brier`, `log_score` and `ece` in `allowed_metrics`. Every prediction
+must provide a probability score. The task enforces these proper-score/diagnostic
+outputs at evaluation and again before leaderboard publication. ECE must include
+equal-width reliability bins with counts and rates; Brier details must include
+finite logistic calibration intercept/slope diagnostics or a nonempty unavailable
+reason; log score must declare its endpoint clipping epsilon. Missing metrics,
+empty diagnostics and inconsistent bin counts cannot be published under this policy.
+An AUROC/AUPRC primary metric can still be used alongside those required outputs.
+
+Unavailable coefficients, such as separated or constant-score fits, remain explicitly
+unavailable and produce warnings. Reporting completeness does not establish that
+predictions are calibrated. Coefficients are held-out diagnostics, not a recalibration
+instruction; their clustered uncertainty and clinically relevant decision utility
+still require a prespecified analysis. Independent ground truth and biological-unit
+metadata are separate requirements. Existing nonprobabilistic/legacy tasks default
+to `requires_probability_reporting: false`; no global scientific qualification is
+introduced. The strict policy is included in the canonical reference hash, so strict
+and optional runs cannot be pooled into one publication set.
 
 ## 3. Robustness and statistics
 
