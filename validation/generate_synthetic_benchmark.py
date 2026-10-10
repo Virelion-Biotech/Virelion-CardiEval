@@ -57,7 +57,7 @@ def generate(n: int = 500, seed: int = 42, out_dir: Path = Path("validation/data
     dataset_sha256 = hashlib.sha256(id_blob).hexdigest()
     manifest = {
         "benchmark_id": "cardiac-synthetic-validation",
-        "version": "1.0.0",
+        "version": "1.1.0",
         "task": "binary_classification",
         "split": "test",
         "sample_ids": sample_ids,
@@ -80,7 +80,7 @@ def generate(n: int = 500, seed: int = 42, out_dir: Path = Path("validation/data
 
     task = {
         "benchmark_id": "cardiac-synthetic-validation",
-        "version": "1.0.0",
+        "version": "1.1.0",
         "task_id": "binary-challenge-detection",
         "task_type": "binary_classification",
         "allowed_metrics": [
@@ -90,6 +90,7 @@ def generate(n: int = 500, seed: int = 42, out_dir: Path = Path("validation/data
             "auroc",
             "auprc",
             "brier",
+            "log_score",
             "ece",
             "sensitivity",
             "specificity",
@@ -99,6 +100,7 @@ def generate(n: int = 500, seed: int = 42, out_dir: Path = Path("validation/data
         "splits": ["validation", "test"],
         "description": "Synthetic binary cardiac challenge detection task for local validation.",
         "requires_authoritative_labels": True,
+        "requires_probability_reporting": True,
     }
     (out_dir / "task.json").write_text(
         json.dumps(task, indent=2) + "\n", encoding="utf-8"
@@ -107,7 +109,7 @@ def generate(n: int = 500, seed: int = 42, out_dir: Path = Path("validation/data
     package = {
         "schema_version": "1.1",
         "benchmark_id": "cardiac-synthetic-validation",
-        "version": "1.0.0",
+        "version": "1.1.0",
         "manifest": manifest,
         "tasks": [task],
         "metadata": {

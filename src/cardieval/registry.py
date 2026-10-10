@@ -2,22 +2,75 @@
 
 from __future__ import annotations
 
+import math
+
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
+from .calibration_curves import CalibrationBin
 from .metrics import METRIC_DIRECTIONS
-from .models import BenchmarkManifest, EvaluationReport, SplitName, TaskType
+from .models import BenchmarkManifest, EvaluationReport, SubgroupResult, SplitName, TaskType
 
 
 _SUPPORTED_METRICS = {
     "classification": {"accuracy", "balanced_accuracy", "macro_f1"},
     "binary_classification": {
-        "accuracy", "balanced_accuracy", "macro_f1", "auroc", "auprc", "brier", "ece",
+        "accuracy", "balanced_accuracy", "macro_f1", "auroc", "auprc", "brier", "log_score", "ece",
         "sensitivity", "specificity", "positive_predictive_value",
         "negative_predictive_value", "matthews_correlation", "cohen_kappa",
     },
     "regression": {"mae", "rmse"},
     "ranking": {"mrr", "hit_rate@10", "ndcg@10"},
 }
+
+PROBABILITY_REPORT_METRICS = frozenset({"brier", "log_score", "ece"})
+
+
+def _validate_probability_report(report: EvaluationReport | SubgroupResult) -> None:
+    metrics = {metric.name: metric for metric in report.metrics}
+    missing = PROBABILITY_REPORT_METRICS - metrics.keys()
+    if missing:
+        raise ValueError(f"probability reporting requires metrics: {sorted(missing)}")
+    if len(metrics) != len(report.metrics):
+        raise ValueError("probability report contains duplicate metrics")
+    brier, log_score, ece = (metrics[name] for name in ("brier", "log_score", "ece"))
+    if not 0 <= brier.value <= 1 or not 0 <= ece.value <= 1 or log_score.value < 0:
+        raise ValueError("probability score values are outside their mathematical ranges")
+    if len({metric.n for metric in (brier, log_score, ece)}) != 1:
+        raise ValueError("probability metrics must describe the same number of records")
+    coefficients = brier.details.get("calibration_coefficients")
+    unavailable = brier.details.get("calibration_coefficients_status")
+    if coefficients is None:
+        if not isinstance(unavailable, str) or not unavailable.strip():
+            raise ValueError("probability reporting requires calibration coefficients or an unavailable reason")
+    else:
+        if not isinstance(coefficients, dict) or unavailable is not None:
+            raise ValueError("calibration coefficient status is inconsistent")
+        for name in ("intercept", "slope"):
+            value = coefficients.get(name)
+            if type(value) not in (int, float) or not math.isfinite(value):
+                raise ValueError("calibration coefficients must be finite numbers")
+        if coefficients.get("n_records") != brier.n:
+            raise ValueError("calibration coefficient record count differs from probability metrics")
+    epsilon = log_score.details.get("probability_clip_epsilon")
+    if type(epsilon) not in (int, float) or not 0 < epsilon < 0.5:
+        raise ValueError("probability reporting requires explicit log-score clipping metadata")
+    n_bins = ece.details.get("n_bins")
+    bins = ece.details.get("bins")
+    if (type(n_bins) is not int or n_bins < 2 or not isinstance(bins, list)
+            or len(bins) != n_bins or ece.details.get("binning") != "equal_width"):
+        raise ValueError("probability reporting requires complete equal-width reliability bins")
+    parsed = [CalibrationBin.model_validate(item) for item in bins]
+    if sum(item.n for item in parsed) != ece.n:
+        raise ValueError("reliability bin counts differ from probability metrics")
+    for i, item in enumerate(parsed):
+        if (not math.isclose(item.lower, i / n_bins, abs_tol=1e-12)
+                or not math.isclose(item.upper, (i + 1) / n_bins, abs_tol=1e-12)):
+            raise ValueError("reliability bin bounds do not match equal-width binning")
+        for value in (item.mean_predicted, item.observed_rate):
+            if item.n == 0 and value is not None:
+                raise ValueError("empty reliability bins must have unknown rates")
+            if item.n > 0 and (value is None or not 0 <= value <= 1):
+                raise ValueError("populated reliability bins require probability/rate values")
 
 
 class BenchmarkTask(BaseModel):
@@ -35,10 +88,17 @@ class BenchmarkTask(BaseModel):
     splits: list[SplitName] = Field(min_length=1)
     description: str = ""
     requires_authoritative_labels: bool = False
+    requires_probability_reporting: bool = False
     expected_dataset_sha256: str | None = Field(default=None, pattern=r"^[0-9a-f]{64}$")
 
     @model_validator(mode="after")
     def validate_contract(self) -> "BenchmarkTask":
+        if self.requires_probability_reporting:
+            if self.task_type != "binary_classification":
+                raise ValueError("probability reporting currently requires binary_classification")
+            missing = PROBABILITY_REPORT_METRICS - set(self.allowed_metrics)
+            if missing:
+                raise ValueError(f"probability reporting requires allowed metrics: {sorted(missing)}")
         if self.primary_metric not in self.allowed_metrics:
             raise ValueError("primary_metric must be listed in allowed_metrics")
         if self.primary_direction not in {"higher_is_better", "lower_is_better"}:
@@ -111,6 +171,10 @@ class BenchmarkTask(BaseModel):
             raise ValueError("independent task requires evaluator-controlled ground truth")
         if not report.ok:
             raise ValueError("report contains evaluation errors")
+        if self.requires_probability_reporting:
+            _validate_probability_report(report)
+            for subgroup in report.subgroups:
+                _validate_probability_report(subgroup)
 
 
 class TaskRegistry:

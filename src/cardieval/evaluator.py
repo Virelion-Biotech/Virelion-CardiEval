@@ -266,6 +266,8 @@ def _classification_metrics(
                     )
                 except ValueError as exc:
                     details["calibration_coefficients_status"] = str(exc)
+                    if warning_sink is not None:
+                        warning_sink.append(f"Calibration coefficients unavailable: {exc}")
             elif name == "log_score":
                 details = {"probability_clip_epsilon": float(np.finfo(float).eps)}
             elif name == "auprc":
@@ -452,6 +454,9 @@ def evaluate_submission(
 
     referenced, ground_truth_source = _apply_authoritative_reference(manifest, records)
     ordered = _order_records(manifest, referenced)
+    if task_contract is not None and task_contract.requires_probability_reporting:
+        if any(r.score is None for r in ordered):
+            raise ValueError("probability reporting requires a probability score for every record")
     if manifest.task == "binary_classification":
         if any(r.y_true not in (0, 1) or r.y_pred not in (0, 1) for r in ordered):
             raise ValueError("binary_classification requires truth and predicted labels 0/1")
@@ -533,6 +538,8 @@ def evaluate_submission(
         "ece_bins": ece_bins,
         "allowed_metrics": sorted(requested_metrics) if requested_metrics is not None else None,
     }
+    if task_contract is not None and task_contract.requires_probability_reporting:
+        reference["requires_probability_reporting"] = True
     reference_sha256 = hashlib.sha256(
         json.dumps(reference, sort_keys=True, separators=(",", ":"), allow_nan=False).encode()
     ).hexdigest()
