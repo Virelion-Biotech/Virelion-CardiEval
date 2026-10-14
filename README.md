@@ -2,6 +2,21 @@
 
 CardiEval is an independent evaluation library for cardiac machine-learning models. It evaluates submitted predictions against versioned benchmark packages without requiring access to model internals.
 
+
+<!-- VALIDATION_PRODUCT_STATUS:BEGIN -->
+## Validation and product completion status
+
+**Reviewed 2026-10-14; implementation base `294628f87044`.** **Status: Synthetic/contract/statistical verification; real benchmark adoption incomplete.** This is an evidence-backed scope assessment, not a percentage-complete estimate or a declaration that the product is finished.
+
+| Area | Current evidence / remaining gate |
+|---|---|
+| Software / operational checks | Automated test sources and CI definitions are present; this documentation audit does not report a new algorithm/data-validation run. |
+| Scientific or domain evidence | The strict synthetic kit checks evaluator-controlled labels, metrics, publication and integrity. Binary probability reporting is opt-in; software checks do not establish cardiac model performance or clinical utility. |
+| Remaining for the declared product scope | Adopt frozen real benchmark packages and independently produced submissions; enforce appropriate subject/cluster units and subgroup coverage; qualify calibration/clinical-utility reporting and interval behavior for intended tasks; complete deployment signing/key/access-control requirements where needed. |
+
+Evidence and limits: [repository report](validation/README.md). The [organization status index](https://github.com/Virelion-Biotech/Virelion-HeartTwin/blob/main/docs/STACK_VALIDATION_STATUS.md) separates software, numerical, data-readiness and empirical qualification. Code/schema execution or a completed download is not a substitute for endpoint-specific validation.
+<!-- VALIDATION_PRODUCT_STATUS:END -->
+
 ## What it contains
 
 - Benchmark and task contract validation.
