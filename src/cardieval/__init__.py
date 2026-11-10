@@ -9,6 +9,7 @@ from .calibration_curves import CalibrationBin, calibration_curve
 from .comparison import compare_predictions
 from .comparison_report import ComparisonReport, build_comparison_report
 from .confidence import paired_difference_ci
+from .clinical_evidence import ClinicalEndpointResult, ClinicalTrialEvidence
 from .stats import binomial_accuracy_ci
 from .decision import ComparisonDecision, QualityGate, ReleaseGateReport, decide_comparison, evaluate_release_gates
 from .diagnostics import cohen_kappa, confusion_matrix_counts, matthews_correlation, negative_predictive_value, positive_predictive_value, sensitivity, specificity
@@ -33,7 +34,7 @@ __all__ = [
     "__version__",
     "ArtifactRecord", "BenchmarkArtifact", "BenchmarkManifest", "BenchmarkPackage", "BenchmarkScore",
     "BenchmarkTask", "BridgeCapabilities", "BridgeEnvelope", "CalibrationBin", "ComparisonDecision",
-    "ComparisonReport", "EvaluationReport", "EvaluationRunManifest", "Leaderboard", "LeaderboardDelta",
+    "ComparisonReport", "ClinicalEndpointResult", "ClinicalTrialEvidence", "EvaluationReport", "EvaluationRunManifest", "Leaderboard", "LeaderboardDelta",
     "LeaderboardEntry", "LeaderboardSnapshot", "MetricResult", "ModelComparison", "ModelScorecard",
     "PredictionRecord", "PredictionSubmission", "PublicationComparison", "QualityGate", "ReleaseGateReport",
     "ReleaseManifest", "Scorecard", "StressResult", "SubgroupResult", "SubmissionBundle", "TaskRegistry",
