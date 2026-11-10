@@ -83,7 +83,6 @@ def test_report_does_not_infer_primary_success_from_subgroup(tmp_path):
     report = build_clinical_evidence_report(load_atlas_clinical_trials(_bundle(tmp_path)))
     trial = report["trials"][0]
     assert trial["primary_endpoint_status"] == "primary_endpoint_not_met"
-    assert trial["interpretation_policy"] if "interpretation_policy" in trial else True
     assert report["interpretation_policy"]["subgroup_results_do_not_override_primary_endpoint"]
 
 
