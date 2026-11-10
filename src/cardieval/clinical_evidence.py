@@ -26,6 +26,7 @@ class ClinicalEndpointResult:
     timepoint: str | None = None
     prespecified: bool | None = None
     multiplicity_adjusted: bool | None = None
+    treatment_by_subgroup_interaction_p_value: float | None = None
     notes: str = ""
 
     def __post_init__(self) -> None:
@@ -35,6 +36,8 @@ class ClinicalEndpointResult:
             raise ValueError("denominator must be positive")
         if self.p_value is not None and not 0 <= self.p_value <= 1:
             raise ValueError("p_value must be between 0 and 1")
+        if self.treatment_by_subgroup_interaction_p_value is not None and not 0 <= self.treatment_by_subgroup_interaction_p_value <= 1:
+            raise ValueError("interaction p-value must be between 0 and 1")
         if self.confidence_interval is not None:
             low, high = self.confidence_interval
             if low > high:
@@ -66,9 +69,8 @@ class ClinicalTrialEvidence:
             raise ValueError("at least one endpoint record is required")
         if len(set(self.source_ids)) != len(self.source_ids):
             raise ValueError("source_ids must be unique")
-        primary = [x for x in self.endpoints if x.role == "primary"]
-        if len(primary) > 1:
-            raise ValueError("record each primary endpoint separately only when explicitly defined; use one record per endpoint")
+        if not self.source_ids:
+            raise ValueError("at least one source_id is required for provenance")
     
     @property
     def primary_endpoint_status(self) -> str:
