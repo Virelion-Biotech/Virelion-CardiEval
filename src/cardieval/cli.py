@@ -192,7 +192,9 @@ def _ingest_atlas_clinical_evidence(argv: list[str]) -> int:
 
 def main() -> int:
     argv = sys.argv[1:]
-    if argv and argv[0] == "ingest-atlas-clinical-evidence":\n        return _ingest_atlas_clinical_evidence(argv[1:])\n    if argv and argv[0] == "run":
+    if argv and argv[0] == "ingest-atlas-clinical-evidence":
+        return _ingest_atlas_clinical_evidence(argv[1:])
+    if argv and argv[0] == "run":
         return _run(argv[1:])
     if argv and argv[0] == "bridge-validate":
         return _bridge_validate(argv[1:])
