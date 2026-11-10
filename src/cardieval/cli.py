@@ -8,6 +8,7 @@ import sys
 from pathlib import Path
 
 from .benchmark_package import load_package, verify_package_artifacts
+from .atlas_ingest import write_clinical_evidence_report
 from .bridge import BridgeEnvelope, validate_envelope
 from .bundle import build_bundle, save_bundle
 from .evaluator import evaluate_submission, load_submission, save_report, sha256_file
@@ -167,8 +168,32 @@ def _verify(argv: list[str]) -> int:
     return 0 if not errors else 1
 
 
+def _ingest_atlas_clinical_evidence(argv: list[str]) -> int:
+    parser = argparse.ArgumentParser(prog="cardieval ingest-atlas-clinical-evidence")
+    parser.add_argument("--atlas-bundle", required=True)
+    parser.add_argument("--output", required=True)
+    args = parser.parse_args(argv)
+    try:
+        report = write_clinical_evidence_report(args.atlas_bundle, args.output)
+    except (OSError, ValueError, KeyError, TypeError) as exc:
+        print(json.dumps({"ok": False, "error": str(exc)}))
+        return 1
+    print(json.dumps({
+        "ok": True,
+        "output": args.output,
+        "trial_count": report["trial_count"],
+        "primary_endpoint_statuses": {
+            trial["trial_id"]: trial["primary_endpoint_status"]
+            for trial in report["trials"]
+        },
+    }))
+    return 0
+
+
 def main() -> int:
     argv = sys.argv[1:]
+    if argv and argv[0] == "ingest-atlas-clinical-evidence":
+        return _ingest_atlas_clinical_evidence(argv[1:])
     if argv and argv[0] == "run":
         return _run(argv[1:])
     if argv and argv[0] == "bridge-validate":

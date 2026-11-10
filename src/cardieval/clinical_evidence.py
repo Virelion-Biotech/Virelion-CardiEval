@@ -42,8 +42,6 @@ class ClinicalEndpointResult:
             low, high = self.confidence_interval
             if low > high:
                 raise ValueError("confidence interval lower bound exceeds upper bound")
-        if self.population == "subgroup" and self.prespecified is None:
-            raise ValueError("subgroup results must state whether the subgroup was prespecified")
 
 
 @dataclass(frozen=True, slots=True)
@@ -94,6 +92,10 @@ class ClinicalTrialEvidence:
                     caveats.append(f"{endpoint.endpoint_name}: multiplicity was not adjusted")
                 if endpoint.prespecified is None:
                     caveats.append(f"{endpoint.endpoint_name}: prespecification status unknown")
+                if endpoint.multiplicity_adjusted is None:
+                    caveats.append(f"{endpoint.endpoint_name}: multiplicity status unknown")
+                if endpoint.treatment_by_subgroup_interaction_p_value is None:
+                    caveats.append(f"{endpoint.endpoint_name}: interaction test not reported")
         return tuple(caveats)
 
     def to_dict(self) -> dict:

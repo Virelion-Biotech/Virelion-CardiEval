@@ -113,3 +113,21 @@ Statistical significance does not establish clinical significance or causal vali
 ## License
 
 GNU Affero General Public License v3.0 or later (AGPL-3.0-or-later). See `LICENSE`.
+
+## Ingest structured clinical evidence from CardiAtlas
+
+CardiEval can load explicitly structured `context.clinical_trial_evidence` objects
+from a CardiAtlas JSONL bundle and write a report that retains source type, endpoint
+hierarchy, analysis population, prespecification, multiplicity and subgroup caveats.
+
+```bash
+cardieval ingest-atlas-clinical-evidence \
+  --atlas-bundle ../Virelion-CardiAtlas/data/therapeutic_products/curated_evidence.v1.jsonl \
+  --output build/clinical-evidence-report.v1.json
+```
+
+Only structured trial objects are ingested; unstructured narrative is never parsed
+into numerical endpoint values. The importer verifies that each source evidence
+record is linked from the referenced CardiAtlas therapeutic-product record.
+Unknown prespecification, multiplicity or interaction-test status remains unknown
+and is surfaced as a caveat rather than being coerced to `false` or zero.
