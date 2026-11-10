@@ -25,12 +25,18 @@ def test_primary_endpoint_failure_is_not_overridden_by_positive_subgroup():
     assert len(trial.subgroup_caveats) == 2
 
 
-def test_subgroup_requires_prespecification_status():
-    with pytest.raises(ValueError, match="prespecified"):
-        ClinicalEndpointResult(
-            endpoint_name="subgroup", role="secondary", population="subgroup",
-            status="met",
-        )
+def test_unknown_subgroup_prespecification_is_preserved_as_a_caveat():
+    trial = ClinicalTrialEvidence(
+        trial_id="trial-unknown-subgroup", product_id="product", phase="II",
+        design="open-label", comparator=None, randomised=False, blinded=False,
+        source_ids=("source-1",), source_type="other",
+        endpoints=(ClinicalEndpointResult(
+            endpoint_name="subgroup", role="exploratory", population="subgroup",
+            status="inconclusive", prespecified=None, multiplicity_adjusted=None,
+        ),),
+    )
+    assert any("prespecification status unknown" in x for x in trial.subgroup_caveats)
+    assert any("interaction test not reported" in x for x in trial.subgroup_caveats)
 
 
 def test_invalid_pvalue_rejected():
