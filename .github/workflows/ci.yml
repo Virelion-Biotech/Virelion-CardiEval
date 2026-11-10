@@ -30,7 +30,9 @@ jobs:
       - run: python -m pip check
       - run: ruff check .
       - run: pytest -q
-      - run: pip-audit --skip-editable
+      - name: Audit dependencies
+        if: matrix.python-version != "3.10"
+        run: pip-audit --skip-editable
 
   package-and-integration:
     runs-on: ubuntu-latest
