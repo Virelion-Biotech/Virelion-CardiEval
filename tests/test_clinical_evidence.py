@@ -22,7 +22,7 @@ def test_primary_endpoint_failure_is_not_overridden_by_positive_subgroup():
         ),
     )
     assert trial.primary_endpoint_status == "primary_endpoint_not_met"
-    assert len(trial.subgroup_caveats) == 2
+    assert len(trial.subgroup_caveats) == 3
 
 
 def test_unknown_subgroup_prespecification_is_preserved_as_a_caveat():
