@@ -17,6 +17,7 @@ from .models import BenchmarkManifest
 from .pipeline import run_evaluation
 from .publication import load_bundle, publish_leaderboard, save_snapshot
 from .publication_history import compare_snapshots, load_snapshot, save_comparison
+from .regeneration_assessment import load_regeneration_assessment, write_regeneration_report
 from .registry import BenchmarkTask
 
 
@@ -190,8 +191,31 @@ def _ingest_atlas_clinical_evidence(argv: list[str]) -> int:
     return 0
 
 
+def _assess_regeneration(argv: list[str]) -> int:
+    parser = argparse.ArgumentParser(prog="cardieval assess-regeneration")
+    parser.add_argument("--input", required=True)
+    parser.add_argument("--output", required=True)
+    args = parser.parse_args(argv)
+    try:
+        assessment = load_regeneration_assessment(args.input)
+        report = write_regeneration_report(assessment, args.output)
+    except (OSError, ValueError, KeyError, TypeError) as exc:
+        print(json.dumps({"ok": False, "error": str(exc)}))
+        return 1
+    print(json.dumps({
+        "ok": True, "output": args.output,
+        "assessment_id": report["assessment_id"],
+        "interpretation": report["interpretation"],
+        "domain_count": len(report["domains"]),
+        "caveat_count": len(report["caveats"]),
+    }))
+    return 0
+
+
 def main() -> int:
     argv = sys.argv[1:]
+    if argv and argv[0] == "assess-regeneration":
+        return _assess_regeneration(argv[1:])
     if argv and argv[0] == "ingest-atlas-clinical-evidence":
         return _ingest_atlas_clinical_evidence(argv[1:])
     if argv and argv[0] == "run":
