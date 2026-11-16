@@ -18,7 +18,7 @@
       "species": "mouse",
       "comparator": "FLuc or GFP modRNA",
       "timepoint": "EdU at 8 h and 24 h; Myc/Cyclin T1 protein not detected at 24 h",
-      "sample_size": 12,
+      "sample_size": null,
       "denominator": null,
       "effect_estimate": "M-C significantly increased cardiomyocyte EdU positivity versus FLuc; exact numerator/denominator not transcribed",
       "uncertainty": "Source-data workbook should be curated before quantitative pooling",
