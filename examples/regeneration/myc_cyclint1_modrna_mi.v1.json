@@ -1,0 +1,153 @@
+{
+  "schema_version": "1.0",
+  "assessment_id": "boikova-2026-myc-cyclint1-modrna-mouse-mi-v1",
+  "title": "Transient Myc–Cyclin T1 modRNA after experimental myocardial infarction",
+  "model": "Adult CD1 mouse LAD-ligation MI; 100 micrograms M-C modRNA injected intramyocardially at surgery. This assessment concerns the modRNA intervention, not the separate transgenic MycER(T2)+AAV-Ccnt1 experiments.",
+  "species": "Mus musculus",
+  "source_ids": [
+    "https://doi.org/10.1038/s44161-026-00910-7"
+  ],
+  "source_reported_interpretation": "The authors interpret proliferation, cardiomyocyte-number, CycleTrack and functional findings as evidence of cardiac regeneration. CardiEval's stricter classification is mixed_evidence because functional maturation of newly generated cardiomyocytes and formal electrophysiological safety were not established.",
+  "small_n_threshold": 10,
+  "domains": [
+    {
+      "domain": "cell_cycle_entry",
+      "status": "direct_support",
+      "assay": "EdU pulse at 8 h and 24 h; cardiomyocyte DNA synthesis; Ki67/BrdU in vitro",
+      "model": "Adult CD1 mouse LAD-ligation MI; M-C modRNA",
+      "species": "mouse",
+      "comparator": "FLuc or GFP modRNA",
+      "timepoint": "EdU at 8 h and 24 h; Myc/Cyclin T1 protein not detected at 24 h",
+      "sample_size": 12,
+      "denominator": null,
+      "effect_estimate": "M-C significantly increased cardiomyocyte EdU positivity versus FLuc; exact numerator/denominator not transcribed",
+      "uncertainty": "Source-data workbook should be curated before quantitative pooling",
+      "source_ids": [
+        "https://doi.org/10.1038/s44161-026-00910-7"
+      ],
+      "notes": "Direct cell-cycle entry evidence; not alone proof of completed cytokinesis."
+    },
+    {
+      "domain": "mitosis_cytokinesis",
+      "status": "direct_support",
+      "assay": "pHH3 and CycleTrack G2/M genetic tracing; adjacent labelled cardiomyocyte doubles",
+      "model": "Adult mouse MI model with M-C modRNA",
+      "species": "mouse",
+      "comparator": "GFP modRNA",
+      "timepoint": "pHH3 after EdU pulse; CycleTrack hearts collected 2 weeks after MI",
+      "sample_size": null,
+      "denominator": null,
+      "effect_estimate": "CycleTrack-labelled cardiomyocyte doubles: 41.5% after M-C versus 5.5% after GFP",
+      "uncertainty": "Doubles are a proxy in this tracing strategy; detailed cell-level denominators and animal-level variance need source-data curation",
+      "source_ids": [
+        "https://doi.org/10.1038/s44161-026-00910-7"
+      ],
+      "notes": "Supports division; does not establish mature functional integration."
+    },
+    {
+      "domain": "cardiomyocyte_number_lineage",
+      "status": "direct_support",
+      "assay": "Total heart cardiomyocyte number at day 5; CycleTrack genetic tracing",
+      "model": "Adult mouse MI model with M-C modRNA",
+      "species": "mouse",
+      "comparator": "FLuc/GFP modRNA",
+      "timepoint": "Day 5 for total cardiomyocyte number; 2 weeks for CycleTrack tracing",
+      "sample_size": null,
+      "denominator": null,
+      "effect_estimate": "Increased total heart cardiomyocyte number reported at day 5; CycleTrack-labelled doubles 41.5% versus 5.5% control",
+      "uncertainty": "Precise animal-level denominators and confidence intervals require source-data extraction",
+      "source_ids": [
+        "https://doi.org/10.1038/s44161-026-00910-7"
+      ],
+      "notes": "Stronger than cell-cycle markers alone; independent replication and integration characterization remain needed."
+    },
+    {
+      "domain": "functional_maturation",
+      "status": "not_assessed",
+      "assay": null,
+      "model": "Adult mouse MI model with M-C modRNA",
+      "species": "mouse",
+      "comparator": null,
+      "timepoint": null,
+      "sample_size": null,
+      "denominator": null,
+      "effect_estimate": null,
+      "uncertainty": null,
+      "source_ids": [],
+      "notes": "No direct demonstration of sarcomeric, calcium-handling, electrophysiological and contractile maturation of daughter cardiomyocytes."
+    },
+    {
+      "domain": "ventricular_function_remodelling",
+      "status": "direct_support",
+      "assay": "Serial echocardiography; LVEF and left-ventricular muscle area",
+      "model": "Adult CD1 mouse LAD-ligation MI, 100 micrograms M-C modRNA",
+      "species": "mouse",
+      "comparator": "FLuc modRNA",
+      "timepoint": "4 and 12 weeks",
+      "sample_size": 15,
+      "denominator": null,
+      "effect_estimate": "At 12 weeks, delta LVEF: -7.1% +/- 6.7% M-C (n=15) versus -16.1% +/- 6.1% FLuc (n=12); reported one-tailed p=0.0006",
+      "uncertainty": "Small cohorts; one-tailed test; prespecification and multiplicity context need source-data/reporting review",
+      "p_value": 0.0006,
+      "prespecified": null,
+      "subgroup": false,
+      "multiplicity_adjusted": null,
+      "follow_up": "12 weeks",
+      "source_ids": [
+        "https://doi.org/10.1038/s44161-026-00910-7"
+      ],
+      "notes": "Functional benefit is separate from proof of regeneration."
+    },
+    {
+      "domain": "fibrosis_scar",
+      "status": "no_support",
+      "assay": "Histological scar area",
+      "model": "Adult CD1 mouse LAD-ligation MI, M-C modRNA",
+      "species": "mouse",
+      "comparator": "FLuc modRNA",
+      "timepoint": "Day 28",
+      "sample_size": null,
+      "denominator": null,
+      "effect_estimate": "No change in scar size reported at day 28 in the M-C modRNA cohort",
+      "uncertainty": "Exact estimate and uncertainty should be extracted from source-data workbook",
+      "source_ids": [
+        "https://doi.org/10.1038/s44161-026-00910-7"
+      ],
+      "notes": "Do not substitute increased LV muscle area for demonstrated scar reduction."
+    },
+    {
+      "domain": "arrhythmia_safety",
+      "status": "not_assessed",
+      "assay": null,
+      "model": "Adult mouse M-C modRNA MI model",
+      "species": "mouse",
+      "comparator": null,
+      "timepoint": null,
+      "sample_size": null,
+      "denominator": null,
+      "effect_estimate": null,
+      "uncertainty": null,
+      "source_ids": [],
+      "notes": "Formal electrophysiology and mapping in large animals are explicitly identified by the authors as future work."
+    },
+    {
+      "domain": "off_target_toxicity",
+      "status": "mixed",
+      "assay": "Organ histology and Ki67 survey; survival follow-up; separate sustained-expression genetic model",
+      "model": "M-C modRNA mice to 12 weeks; separate global MycER(T2)+AAV-Ccnt1 model is a distinct exposure",
+      "species": "mouse",
+      "comparator": "FLuc controls; separate transgenic controls",
+      "timepoint": "12 weeks for M-C histology; 3–7 days for distinct sustained/global-expression hazard",
+      "sample_size": null,
+      "denominator": null,
+      "effect_estimate": "No tumors observed in surveyed organs at 12 weeks; survival difference not significant (log-rank p=0.2008). In separate global genetic model, 7/8 mice became moribund or died after sustained/global MycER(T2)+Cyclin T1 activation.",
+      "uncertainty": "Different exposure modalities and cohorts; global-model lethality is a hazard signal, not an M-C modRNA event rate",
+      "p_value": 0.2008,
+      "follow_up": "12 weeks for M-C; 3–7 days for separate sustained-expression model",
+      "source_ids": [
+        "https://doi.org/10.1038/s44161-026-00910-7"
+      ],
+      "notes": "Keep favorable 12-week histology and severe separate-model expression hazard distinct; 12 weeks is not lifetime surveillance."
+    }
+  ]
+}
