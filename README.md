@@ -131,3 +131,16 @@ into numerical endpoint values. The importer verifies that each source evidence
 record is linked from the referenced CardiAtlas therapeutic-product record.
 Unknown prespecification, multiplicity or interaction-test status remains unknown
 and is surfaced as a caveat rather than being coerced to `false` or zero.
+
+
+## Regeneration versus repair evidence assessment
+
+CardiEval also provides a domain-separated preclinical assessment that keeps cell-cycle entry, mitosis/cytokinesis, cardiomyocyte number/lineage, functional maturation, ventricular function, fibrosis/scar, arrhythmia safety and off-target toxicity independent. It emits a categorical interpretation and caveats, never a composite regeneration score.
+
+```bash
+cardieval assess-regeneration \
+  --input examples/regeneration/myc_cyclint1_modrna_mi.v1.json \
+  --output build/myc-cyclint1-regeneration-report.v1.json
+```
+
+The initial source-linked example is Boikova et al. (2026), DOI: 10.1038/s44161-026-00910-7. Its interpretation is intentionally mixed: cell-cycle/division and cardiomyocyte-number findings are separated from ventricular function, while maturation of daughter cardiomyocytes and formal electrophysiological safety remain not assessed. See [the assessment method](docs/REGENERATION_ASSESSMENT.md).
