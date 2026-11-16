@@ -89,3 +89,13 @@ def test_duplicate_domains_rejected():
             assessment_id="x", title="x", model="x", species="mouse",
             source_ids=(SOURCE,), domains=a.domains[:-1] + (a.domains[0],),
         )
+
+def test_published_myc_case_is_not_overcalled_as_complete_regeneration():
+    from pathlib import Path
+    from cardieval.regeneration_assessment import load_regeneration_assessment
+
+    path = Path(__file__).resolve().parents[1] / "examples" / "regeneration" / "myc_cyclint1_modrna_mi.v1.json"
+    case = load_regeneration_assessment(path)
+    assert case.interpretation == "mixed_evidence"
+    assert next(x for x in case.domains if x.domain == "functional_maturation").status == "not_assessed"
+    assert next(x for x in case.domains if x.domain == "arrhythmia_safety").status == "not_assessed"
