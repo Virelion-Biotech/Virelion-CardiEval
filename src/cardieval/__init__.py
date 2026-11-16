@@ -10,6 +10,7 @@ from .comparison import compare_predictions
 from .comparison_report import ComparisonReport, build_comparison_report
 from .confidence import paired_difference_ci
 from .clinical_evidence import ClinicalEndpointResult, ClinicalTrialEvidence
+from .regeneration_assessment import RegenerationAssessment, RegenerationDomainEvidence, load_regeneration_assessment, write_regeneration_report
 from .atlas_ingest import build_clinical_evidence_report, load_atlas_clinical_trials, write_clinical_evidence_report
 from .stats import binomial_accuracy_ci
 from .decision import ComparisonDecision, QualityGate, ReleaseGateReport, decide_comparison, evaluate_release_gates
@@ -35,7 +36,7 @@ __all__ = [
     "__version__",
     "ArtifactRecord", "BenchmarkArtifact", "BenchmarkManifest", "BenchmarkPackage", "BenchmarkScore",
     "BenchmarkTask", "BridgeCapabilities", "BridgeEnvelope", "CalibrationBin", "ComparisonDecision",
-    "ComparisonReport", "ClinicalEndpointResult", "ClinicalTrialEvidence", "EvaluationReport", "build_clinical_evidence_report", "load_atlas_clinical_trials", "write_clinical_evidence_report", "EvaluationRunManifest", "Leaderboard", "LeaderboardDelta",
+    "ComparisonReport", "ClinicalEndpointResult", "ClinicalTrialEvidence", "RegenerationAssessment", "RegenerationDomainEvidence", "load_regeneration_assessment", "write_regeneration_report", "EvaluationReport", "build_clinical_evidence_report", "load_atlas_clinical_trials", "write_clinical_evidence_report", "EvaluationRunManifest", "Leaderboard", "LeaderboardDelta",
     "LeaderboardEntry", "LeaderboardSnapshot", "MetricResult", "ModelComparison", "ModelScorecard",
     "PredictionRecord", "PredictionSubmission", "PublicationComparison", "QualityGate", "ReleaseGateReport",
     "ReleaseManifest", "Scorecard", "StressResult", "SubgroupResult", "SubmissionBundle", "TaskRegistry",
