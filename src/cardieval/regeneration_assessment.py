@@ -87,7 +87,7 @@ class RegenerationAssessment:
         by_name = {item.domain: item for item in self.domains}
         core = [by_name[name].status for name in REGENERATIVE_CORE]
         direct_core = sum(status == "direct_support" for status in core)
-        adverse = any(by_name[name].status == "adverse_signal" for name in ("arrhythmia_safety", "off_target_toxicity"))
+        adverse = any(by_name[name].status in ("adverse_signal", "mixed") for name in ("arrhythmia_safety", "off_target_toxicity"))
         unresolved_core = any(status in ("not_assessed", "not_reported", "mixed", "surrogate_support") for status in core)
         if direct_core == len(REGENERATIVE_CORE) and not adverse and not unresolved_core:
             return "regeneration_demonstrated_in_model"
