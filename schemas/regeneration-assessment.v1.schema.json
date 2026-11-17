@@ -1,0 +1,186 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://virelion-biotech.github.io/Virelion-CardiEval/schemas/regeneration-assessment.v1.schema.json",
+  "title": "CardiEval Regeneration Assessment v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "assessment_id",
+    "title",
+    "model",
+    "species",
+    "source_ids",
+    "domains"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "1.0"
+    },
+    "assessment_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "title": {
+      "type": "string",
+      "minLength": 1
+    },
+    "model": {
+      "type": "string",
+      "minLength": 1
+    },
+    "species": {
+      "type": "string",
+      "minLength": 1
+    },
+    "source_ids": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "type": "string"
+      }
+    },
+    "source_reported_interpretation": {
+      "type": "string"
+    },
+    "small_n_threshold": {
+      "type": "integer",
+      "minimum": 2
+    },
+    "domains": {
+      "type": "array",
+      "minItems": 8,
+      "maxItems": 8,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "domain",
+          "status",
+          "source_ids"
+        ],
+        "properties": {
+          "domain": {
+            "enum": [
+              "cell_cycle_entry",
+              "mitosis_cytokinesis",
+              "cardiomyocyte_number_lineage",
+              "functional_maturation",
+              "ventricular_function_remodelling",
+              "fibrosis_scar",
+              "arrhythmia_safety",
+              "off_target_toxicity"
+            ]
+          },
+          "status": {
+            "enum": [
+              "direct_support",
+              "surrogate_support",
+              "no_support",
+              "adverse_signal",
+              "mixed",
+              "not_reported",
+              "not_assessed"
+            ]
+          },
+          "assay": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "model": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "species": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "comparator": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "timepoint": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "sample_size": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 1
+          },
+          "denominator": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 1
+          },
+          "effect_estimate": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "uncertainty": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "p_value": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "minimum": 0,
+            "maximum": 1
+          },
+          "prespecified": {
+            "type": [
+              "boolean",
+              "null"
+            ]
+          },
+          "subgroup": {
+            "type": "boolean"
+          },
+          "multiplicity_adjusted": {
+            "type": [
+              "boolean",
+              "null"
+            ]
+          },
+          "follow_up": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "source_ids": {
+            "type": "array",
+            "uniqueItems": true,
+            "items": {
+              "type": "string"
+            }
+          },
+          "notes": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  }
+}
